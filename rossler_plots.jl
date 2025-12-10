@@ -24,15 +24,19 @@ function main()
 
     plt = plot3d(
         1,
-        xlim = (-30, 30),
-        ylim = (-30, 30),
-        zlim = (0, 60),
+        xlim = (-100, 100),
+        ylim = (-100, 100),
+        zlim = (-10, 80),
         title = "Rossler Attractor",
+        xlabel = "X-axis",
+        ylabel = "Y-axis",
+        zlabel = "Z-axis",
+        line = (:blue, 0.5),
         marker = 2,
     )
 
     # Build the animation
-    anim = @animate for i = 1:1500
+    anim = @animate for i = 1:10000
         step!(attractor)
         push!(plt, attractor.x, attractor.y, attractor.z)
     end every 10
@@ -40,3 +44,5 @@ function main()
     # Save GIF in current directory
     gif(anim, "rossler.gif", fps = 30)
 end
+
+

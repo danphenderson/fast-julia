@@ -1,21 +1,27 @@
+# final/app.jl
 
-@base.kwdef mutable struct RosslerStepNiave
-    dt::Float64 = 0.005
-    a::Float64 = 0.1
-    b::Float64 = 0.1
-    c::Float64 = 12
-    x::Float64 = 1
-    y::Float64 = 1
-    z::Float64 = 1
+include("base.jl")
+
+mutable struct Rossler{T} <: ODESystem{T}
+    a::T
+    b::T
+    c::T
+    dt::T
+    function Rossler(a::T, b::T, c::T, dt::T) where {T}
+        return Rossler{T}(a, b, c, dt)
+    end
 end
+order(::Rossler{T}) where {T} = 1
+dims(sys::Rossler{T}) where {T} = 3
+sol_shape(sys::Rossler{T}) where {T} = (:, 3)
+state(sys::Rossler{T}) where {T} = getfield(sys, :_state)
+set_state!(sys::Rossler{T}, new_state) where {T} = (sys._state = new_state)
+dt(sys::Rossler{T}) where {T} = getfield(sys, :dt)
+set_dt!(sys::Rossler{T}, new_dt) where {T} = (sys.dt = new_dt)
 
 
-function step!(r::Rossler)
-    dx = r.y - r.z
-    dy = r.x + (r.a * r.y) - r.z
-    dz = r.b + r.z * (r.x - r.c)
-    r.x += r.dt * dx
-    r.y += r.dt * dy
-    r.z += r.dt * dz
-end
+
+dxdt(sys::Rossler{T}) = sys(:a) .* (state(sys)[2] .- state(sys)[1])
+dydt(sys::Rossler{T}) = state(sys)[1] .+ sys(:b) .* state(sys)[2]
+dzdt(sys::Rossler{T}) = sys(:c) .+ state(sys)[3] .* (state(sys)[1] .- state(sys)[4])
 

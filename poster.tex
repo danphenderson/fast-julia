@@ -49,23 +49,26 @@
 % The third is 19% wide and houses a logo for your university/organization or a photo of you
 % The widths of these boxes can be easily edited to accommodate your content as you see fit
 
-\begin{minipage}[b]{0.58\linewidth}
-  \veryHuge \color{PMS310C} \textbf{Fast Julia} \color{Black}\\ % Title
-  \Huge\textit{Accelerating ODE Solvers}[1cm] % Subtitle
+\begin{minipage}[b]{0.55\linewidth}
+  \raggedright
+  \veryHuge \color{PMS310C} \textbf{POC to Production} \color{Black}\\[0.4cm]
+  \Huge\textit{Fast Julia Dynamical Systems}\\[0.8cm]
 \end{minipage}
-%
-\begin{minipage}[b]{0.22\linewidth}
-  \Large \textbf{Contact Information:}\\
+\hfill
+\begin{minipage}[b]{0.23\linewidth}
+  \raggedright
+  \Large \textbf{Contact Information:}\\[0.25cm]
   Daniel Henderson\\
   Michigan Technological University\\
-  Department of Mathematical Sciences \\
+  Department of Mathematical Sciences\\
   Houghton, MI\\
-  Email: \texttt{dphender@mtu.edu} % Email address
-\end{minipage}
-%
-\begin{minipage}[b]{0.19\linewidth}
-  \includegraphics[width=20cm]{figures/logo.png} % Logo or a photo of you, adjust its dimensions here\\
-  \vspace*{2in}
+  Email: \texttt{dphender@mtu.edu}
+\end{minipage}%
+\hfill
+\begin{minipage}[b]{0.18\linewidth}
+  \raggedleft
+  \vspace{0.4cm}
+  \includegraphics[width=0.9\linewidth]{figures/logo.png}\\[0.6cm]
 \end{minipage}
 
 \vspace{1cm}
@@ -81,7 +84,8 @@
 %----------------------------------------------------------------------------------------
 
 \begin{abstract}
- abstract goes here
+  \noindent Comparison of niave to production implementations for solve small system
+  of ODEs $(< 100)$ (why less than 100?)
 \end{abstract}
 
 %----------------------------------------------------------------------------------------
