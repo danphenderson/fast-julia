@@ -1,0 +1,334 @@
+% Packages
+% ---------- Basic Packages ----------
+\usepackage[utf8]{inputenc}
+\usepackage{array}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{multicol}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{lipsum}
+\usepackage{fancybox}
+\usepackage{todonotes}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{mdframed} % boxed theorems
+\usepackage{thmtools} % couples well with mdframed
+\usepackage{tikz} \usetikzlibrary{arrows.meta, calc, decorations.pathmorphing, positioning}
+\usepackage{listings}
+
+% --------- Code Listings ----------
+\captionsetup[lstlisting]{font={small}, labelfont={bf}, labelsep=colon}
+\renewcommand{\lstlistingname}{Code}
+
+% ---------- Color Commands ----------
+\DeclareRobustCommand{\yellow}[1]{\begingroup\color{Yellow}\ignorespaces#1\endgroup\ignorespacesafterend}
+\DeclareRobustCommand{\red}[1]{\begingroup\color{Red}\ignorespaces#1\endgroup\ignorespacesafterend}
+\DeclareRobustCommand{\blue}[1]{\begingroup\color{Blue}\ignorespaces#1\endgroup\ignorespacesafterend}
+\DeclareRobustCommand{\green}[1]{\begingroup\color{Green}\ignorespaces#1\endgroup\ignorespacesafterend}
+\DeclareRobustCommand{\gray}[1]{\begingroup\color{Gray}\ignorespaces#1\endgroup\ignorespacesafterend}
+\newenvironment{redblock}{\begingroup\color{Red}\ignorespaces}{\endgroup\ignorespacesafterend}
+
+
+% ---------- Math and Theorem Environments ----------
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{amsmath, amssymb, amsthm, amsfonts, mathtools, bm, amsopn}
+\usepackage{witharrows}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{mdframed}       % boxed theorems
+\usepackage{thmtools}       % couples well with mdframed
+\usepackage{capt-of}        % if you prefer \captionof
+
+% ================== THEOREM ENVIRONMENTS ==================
+\numberwithin{equation}{subsection} % optional
+
+% Main shared counter “theorem” per section:
+\newtheorem{theorem}{Theorem}[subsection]
+
+% All others share the same counter as “theorem”:
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{prop}[theorem]{Proposition}
+
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Boxed Assumption using the custom style, sharing the same counter:
+\declaretheorem[
+  name=Assumption,
+  style=boxed,
+  sibling=theorem
+]{assumption}
+% % Define a theorem style that uses mdframed for the box
+% \declaretheoremstyle[
+%   headfont=\normalfont\bfseries,
+%   mdframed={
+%     linewidth=0.5pt,
+%     roundcorner=4pt,
+%     backgroundcolor={gray!5},
+%     innertopmargin=6pt,
+%     innerbottommargin=6pt,
+%     innerleftmargin=8pt,
+%     innerrightmargin=8pt
+%   }
+% ]{boxed}
+% % Create the “assumption” environment, numbered within each section
+% \declaretheorem[name=Assumption, style=boxed, numberwithin=section]{assumption}
+% % Other logical environments
+% \newenvironment{solution}
+%   {\renewcommand\qedsymbol{$\blacksquare$}\begin{proof}[\textbf{Solution}]}
+%   {\end{proof}}
+% \newtheorem{lemma}{Lemma}
+%   \renewcommand{\thelemma}{\Alph{lemma}}
+% \newtheorem*{lem}{Lemma}
+% \newtheorem{corollary}[lemma]{Corollary}
+% \newtheorem*{theorem}{theorem}
+% \theoremstyle{definition}
+% \newtheorem{definition}{Definition}
+% \theoremstyle{remark}
+% \newtheorem*{remark}{Remark}
+% \theoremstyle{claim}
+% \newtheorem*{claim}{Claim}
+
+% ---------- Page setup ----------
+\geometry{letterpaper, margin=1in}
+\setlength{\parindent}{0pt}
+\linespread{1.5}
+\renewcommand{\arraystretch}{1.25} % Adjust as needed
+
+% ---------- Shaded box's to tag ideas ----------
+\newcommand{\td}[1]{\todo[inline, color=red!20, size=\small]{#1}}
+\newcommand{\note}[1]{\todo[inline, color=blue!20, size=\small]{#1}}
+\newcommand{\remeber}[1]{\todo[inline, color=green!20, size=\small]{#1}}
+
+% ---------- Sets and number systems ----------
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\La}{\mathcal{L}}
+
+% ---------- Summations ----------
+\newcommand{\sumforall}{\sum_{\forall i}}
+\newcommand{\sumfor}[1]{\sum_{\forall #1}}
+
+% ---------- Generic Domains ----------
+\newcommand{\Omg}{\Omega}
+\newcommand{\OmgBar}{\overline{\Omega}}
+\newcommand{\Omgt}{\Omega(t)}
+\newcommand{\pOmg}{\partial \Omega}
+\newcommand{\pOmgt}{\partial \Omega(t)}
+
+
+%---------- Blood Domain ----------
+\newcommand{\OmgB}{\Omega_B}
+\newcommand{\OmgBt}{\Omega_B(t)}
+\newcommand{\OmgBtBar}{\overline{\Omega}_B(t)}
+\newcommand{\OmgBBar}{\overline{\Omega}_B}
+\newcommand{\pOmgB}{\partial \Omega_B}
+\newcommand{\pOmgBt}{\partial \Omega_B(t)}
+
+%---------- Vessel Wall Domain ----------
+\newcommand{\OmgW}{\Omega_W}
+\newcommand{\OmgWt}{\Omega_W(t)}
+\newcommand{\pOmgW}{\partial \Omega_W}
+
+% ---------- Symbols ----------
+\newcommand{\e}{\epsilon}
+\newcommand{\p}{\rho}
+\newcommand{\eps}{\epsilon}
+\newcommand{\la}{\lambda}
+
+% ---------- Linear Algebra ----------
+\newcommand{\matr}[1]{\begin{pmatrix}#1\end{pmatrix}} % For matrices
+\newcommand{\vect}[1]{\begin{bmatrix}#1\end{bmatrix}} % For column vectors
+\newcommand{\vct}[1]{\bm{#1}} % For bold vectors
+\newcommand{\transp}{^{\mathsf{T}}} % Transpose symbol
+\newcommand{\sym}{\text{sym}} % Symmetric part of a matrix
+\DeclarePairedDelimiter\ip{\langle}{\rangle} % Inner product
+\DeclarePairedDelimiter\norm{\lVert}{\rVert} % Norm
+\newcommand{\zero}{\mathbf{0}} % Zero vector/matrix
+\newcommand{\ident}{\mathbf{I}} % Identity matrix
+\newcommand{\id}[1]{\operatorname{id}_{#1}} % Identity map on set #1
+\DeclareMathOperator{\tr}{tr} % Trace
+\DeclareMathOperator{\detm}{det} % Determinant
+\DeclareMathOperator{\rank}{rank} % Rank
+\DeclareMathOperator{\nullity}{nullity} % Nullity
+
+% Block Matrices and Vectors ----------
+\newcommand{\blockmat}[2]{\begin{pmatrix} #1 & #2 \end{pmatrix}} % Block matrix with 2 columns
+\newcommand{\augmatr}[2]{\left(\begin{array}{#1|#1}#2\end{array}\right)}
+\newcommand{\bmfour}[4]{\left( \begin{array}{c|c} #1 & #2 \\ \hline #3 & #4 \end{array} \right)} % 2x2 block matrix with lines
+\newcommand{\blockvect}[2]{\begin{bmatrix} #1 \\ #2 \end{bmatrix}} % Block vector with 2 rows
+
+% Unit vectors ----------
+\newcommand{\nhat}{\hat{\vct{n}}}
+\newcommand{\that}{\hat{\vct{t}}}
+\newcommand{\ihat}{\hat{\vct{i}}}
+\newcommand{\jhat}{\hat{\vct{j}}}
+\newcommand{\khat}{\hat{\vct{k}}}
+
+% Generic vectors and tensors. (bold notation) ---------
+\newcommand{\vu}{\vct{u}}
+\newcommand{\vv}{\vct{v}}
+\newcommand{\vT}{\vct{T}}
+\newcommand{\vt}{\vct{t}}
+\newcommand{\vTx}{\vct{T}(\vct{x})}
+\newcommand{\vx}{\vct{x}}
+\newcommand{\vxi}{\vct{\xi}}
+\newcommand{\vfb}{\vct{f_b}}
+\newcommand{\vf}{\vct{f}}
+\newcommand{\vF}{\vct{F}}
+\newcommand{\vA}{\vct{A}}
+\newcommand{\vFhat}{\widehat{\vct{F}}}
+\newcommand{\vJ}{\vct{J}}
+\newcommand{\vJhat}{\widehat{\vct{J}}}
+\newcommand{\Jdet}{J}
+\newcommand{\Jhatdet}{\widehat{J}}
+\newcommand{\phihat}{\widehat{\phi}}
+\newcommand{\vw}{\vct{w}}
+\newcommand{\va}{\vct{a}}
+\newcommand{\vahat}{\widehat{\vct{a}}}
+\newcommand{\vuhat}{\widehat{\vct{u}}}
+\newcommand{\vub}{\widehat{\vct{u_b}}}
+\newcommand{\vepsilon}{\vct{\epsilon}}
+\newcommand{\vtheta}{\vct{\theta}}
+\newcommand{\ej}{\vct{e_j}}
+\newcommand{\eo}{\vct{e_1}}
+\newcommand{\ef}{\vct{e_1}} % first basis vector
+\newcommand{\el}{\vct{e_n}} % nth basis vector
+
+% Learning Stuff
+\newcommand{\vW}[1]{\vct{W_{#1}}} % Weight matrix
+\newcommand{\vN}[1]{\vct{N_{#1}}} % Neural Network Layer output}
+\newcommand{\vb}[1]{\vct{b_{#1}}} % Bias vector
+\newcommand{\vsigma}{\vct{\sigma}} % Activation function
+\newcommand{\vmL}{\mathcal{L}_{\text{obj}}} % Loss function
+\newcommand{\vs}{\vct{s}} % Step direction
+\newcommand{\vH}{\vct{H}} % Hessian matrix
+\newcommand{\vd}{\vct{d}} % Direction vector 1
+
+% Basis vectors
+\newcommand{\generalbasis}{\{\vct{v_1}, \ldots, \, \vct{v_n}\}}
+\newcommand{\stdbasis}{\{\vct{e_1}, \ldots, \, \vct{e_n}\}}
+
+% ---------- Operators ----------
+\newcommand{\equivto}{\; \equiv \;}
+\newcommand{\defined}{\; := \;}
+\newcommand{\equals}{\; = \;}
+\newcommand{\ol}{\overline}
+\newcommand{\pd}{\partial}
+\newcommand{\dt}{\frac{d}{dt}}
+\newcommand{\pdt}{\frac{\partial}{\partial t}}
+\newcommand{\dx}{\, d\vct{x}}
+\newcommand{\dxi}{\, d\vct{\xi}}
+\newcommand{\dSx}{\, dS_{\vct{x}}}
+\newcommand{\argmin}{\operatorname{argmin}}
+\DeclareMathOperator{\col}{col}
+\DeclareMathOperator{\spn}{span}
+\DeclareMathOperator{\range}{range}
+\DeclareMathOperator{\kernel}{ker}
+\newcommand{\inv}[1]{#1^{-1}}
+\DeclareMathOperator{\dia}{diag}
+
+\newcommand{\del}{\Delta}
+\newcommand{\Div}{\text{div}}
+\newcommand{\Divbf}{\textbf{div}}
+\newcommand{\inp}[2]{\langle #1, \; #2 \rangle}
+\newcommand{\forallin}[2]{\forall #1 \in #2}
+\newcommand{\forallsubsets}[2]{\forall \; #1 \subset #2}
+\newcommand{\units}[1]{\; \big[ \; #1 \; \big]}
+\newcommand{\blinform}[2]{a\big( #1, \; #2 \big)}
+
+% ---------- Define custom colors ----------
+\definecolor{bg}{rgb}{0.95,0.95,0.92}
+\definecolor{codeblue}{rgb}{0.25,0.5,0.75}
+\definecolor{keyword}{rgb}{0.5,0,0.5}
+\definecolor{string}{rgb}{0,0.5,0}
+
+% ---------- Define the style for IPython ----------
+\lstdefinelanguage{ipython}{
+  basicstyle=\ttfamily\footnotesize\color{black},
+  keywordstyle=\color{keyword}\bfseries,
+  stringstyle=\color{string},
+  backgroundcolor=\color{bg},
+  morekeywords={In,Out},
+  frame=lines,
+  numbers=left,
+  numbersep=5pt
+}
+
+% ---------- Define the style for Julia ----------
+\lstdefinelanguage{julia}{
+  keywords={struct, abstract, primitive, typealias, bitstype, mutable, module, baremodule, import, importall, using, export, if, else, elseif, for, while, break, continue, function, return, type, global, local, const, let, do, try, catch, finally, end, quote, macro, where},
+  basicstyle=\ttfamily\footnotesize\color{black},
+  keywordstyle=\color{keyword}\bfseries,
+  stringstyle=\color{string},
+  backgroundcolor=\color{bg},
+  frame=lines,
+  numbers=left,
+  numbersep=8pt,
+  inputencoding=utf8,
+  extendedchars=true,
+  escapeinside={(*}{*)},
+  literate={~}{{$\sim$}}1
+           {₁}{{\textsubscript{1}}}1
+           {₂}{{\textsubscript{2}}}1
+           {₃}{{\textsubscript{3}}}1
+           {ᵀ}{{$^{\mathrm{T}}$}}1
+           {⋅}{{$\cdot$}}1
+           {∈}{{$\in$}}1
+           {ℝ}{{$\mathbb{R}$}}1
+           {→}{{$\to$}}1
+           {π}{{$\pi$}}1
+           {≤}{{$\leq$}}1
+           {≥}{{$\geq$}}1
+           {≈}{{$\approx$}}1
+           {ϵ}{{$\epsilon$}}1
+           {κ}{{$\kappa$}}1
+           {Δ}{{$\Delta$}}1
+           {λ}{{$\lambda$}}1
+}
+
+% ---------- Define the style for Mathematica ----------
+\lstdefinelanguage{Mathematica}{
+  keywords={Module,With,Block,If,Then,Else,Which,Switch,For,While,Return,Do,Table,Plot,Map,Apply,Function,Set,SetDelayed,Clear,Quit,NonlinearModelFit,FindMinimum,FindMaximum,FindRoot,NIntegrate,Integrate,Simplify,FullSimplify,DSolve,RSolve,NSolve,NDSolve,Limit,Series,Assuming,Expand,Factor,TableForm,MatrixForm,Part,Length,Dimensions,Transpose,MapThread,MapAt,Flatten,Thread,Join,Outer,ConstantArray,Riffle,ArrayPlot,Plot3D,ContourPlot,ParametricPlot,MatrixPlot,Graphics,Graphics3D,Manipulate,Evaluate,Sin,Cos,Exp,Log,Sqrt},
+  keywordstyle=\color{keyword}\bfseries,
+  sensitive=true,
+  morecomment=[l]{(*}, morecomment=[r]{*)},
+  commentstyle=\itshape\color{gray},
+  morestring=[b]",
+  stringstyle=\color{string},
+  basicstyle=\ttfamily\footnotesize\color{black},
+  backgroundcolor=\color{bg},
+  frame=lines,
+  numbers=left,
+  numbersep=5pt,
+  showstringspaces=false,
+  escapeinside={(*}{*)}
+}
+
+% ---------- Optionally define a style for Mathematica code cells ----------
+\lstdefinestyle{mathematicaStyle}{
+  language=Mathematica,
+  frame=lines,
+  backgroundcolor=\color{bg},
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{keyword}\bfseries,
+  commentstyle=\itshape\color{gray},
+  stringstyle=\color{string},
+  numbers=left,
+  numbersep=5pt,
+  showstringspaces=false
+}
