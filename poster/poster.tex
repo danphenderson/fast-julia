@@ -1,0 +1,209 @@
+\documentclass[a0,landscape]{a0poster}
+\usepackage{times}
+\input{preamble.tex} % after the basics
+
+\definecolor{PMS310C}{RGB}{62,192,197} % Official MTU colorway
+\begin{document}
+
+%----------------------------------------------------------------------------------------
+% HEADER
+%----------------------------------------------------------------------------------------
+\begin{minipage}[b]{0.55\linewidth}
+  \raggedright
+  \veryHuge \color{PMS310C} \textbf{Proof-Of-Concept to Production} \color{Black}\\[0.4cm]
+  \Huge\textit{Fast Julia Differential Equation Solving}\\[0.8cm]
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.23\linewidth}
+  \raggedright
+  \red{\Large \textbf{Contact Information:}\\[0.25cm]
+  Daniel Henderson\\
+  Michigan Technological University\\
+  Department of Mathematical Sciences\\
+  Houghton, MI\\
+  Email: \texttt{dphender@mtu.edu}}
+\end{minipage}
+\hfill
+\begin{minipage}[b]{0.18\linewidth}
+  \raggedleft
+  \vspace{0.4cm}
+  \includegraphics[width=0.9\linewidth]{logo.png}\\[0.6cm]
+\end{minipage}
+
+\vspace{1cm}
+\hrulefill
+
+%----------------------------------------------------------------------------------------
+% BODY (3 COLUMNS)
+%----------------------------------------------------------------------------------------
+
+\begin{multicols}{3}
+
+%------------------------ ABSTRACT ------------------------
+\begin{abstract}
+  \noindent
+  We compare naïve and optimized Julia implementations for solving 
+  small to moderate systems of ordinary differential equations 
+  (up to $\mathcal{O}(10^2)$ state variables). Using 
+  \texttt{DifferentialEquations.jl} and standard performance tools, 
+  we demonstrate how a sequence of targeted changes---in-place updates, 
+  type stability, and solver selection---can yield order-of-magnitude 
+  speedups while preserving code clarity and reproducibility.
+\end{abstract}
+
+%------------------------ INTRODUCTION ------------------------
+\section*{Introduction}
+
+\noindent
+Numerical solutions of differential equations underpins a wide range
+of scientific and engineering workflows. Modern simulation pipelines 
+routinely require millions of right-hand side evaluations, long time 
+horizons, or large parameter sweeps. In this setting, even modest 
+inefficiencies in user code can translate into substantial wasted 
+compute time and memory.
+
+\medskip
+
+\noindent
+Many users, especially those coming from MATLAB, SciPy, or R, naturally
+express ODE systems in an out-of-place, vectorized style that allocates
+temporary arrays at each function call, performs slicing that copies
+data, and relies on dynamic types and global variables. This approach
+is convenient for proof-of-concept scripts, but suffers from excessive 
+memory allocation and garbage collection, and consequently poor scaling
+for long simulations or ensembles. Acheiving ``production'' performance 
+requires not only choosing an appropriate integrator, but also writing the model 
+equations in a performance-conscious style.
+
+\medskip
+
+\noindent
+The Julia package \texttt{DifferentialEquations.jl}, part of the SciML
+ecosystem, provides state-of-the-art algorithms for ordinary, stochastic,
+delay, and partial differential equations, and benchmarks among the
+fastest solver libraries across languages. Herein, we distill and extend
+the SciML tutorial on optimizing differential equation code by:
+\begin{itemize}
+  \item contrasting naïve and optimized Julia implementations on a small
+        nonstiff Rossler system.
+  \item applying a sequence of user-side optimizations---in-place
+        updates, \texttt{StaticArrays.jl} for small state vectors,
+        broadcast fusion, BLAS-based matrix operations, and
+        matrix-free stencils---to make the right-hand side essentially
+        non-allocating and type-stable; and
+  \item demonstrating how appropriate solver choice (e.g., explicit
+        Runge--Kutta vs.\ implicit BDF methods) further amplifies these
+        gains, especially for stiff problems.
+\end{itemize}
+Together, these examples illustrate a practical path from
+proof-of-concept to production-ready Julia differential equation solvers,
+with order-of-magnitude improvements in runtime and memory usage while
+maintaining clear, reproducible code.
+
+% --- Figure placeholder: overview / pipeline ---
+\medskip
+\begin{center}
+  \includegraphics[width=0.9\linewidth]{pipeline_placeholder.pdf}
+  \captionof{figure}{%
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+    Placeholder overview diagram of the proof-of-concept to 
+    production ODE solver workflow.}
+\end{center}
+\medskip
+
+\noindent
+Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet
+rutrum faucibus dolor auctor. Integer posuere erat a ante venenatis dapibus
+posuere velit aliquet.
+
+%------------------------ RESULTS / ANALYSIS ------------------------
+\section*{Results/Analysis}
+
+\noindent
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris fermentum
+facilisis ligula, id hendrerit lectus gravida sed. Vestibulum ante ipsum primis
+in faucibus orci luctus et ultrices posuere cubilia curae; Sed aliquet, erat
+vel volutpat tempor, urna lorem vehicula elit, ut facilisis neque enim sed
+massa. Suspendisse potenti.
+
+\medskip
+
+% --- Figure placeholder: speedup plot ---
+\begin{center}
+  \includegraphics[width=0.95\linewidth]{speedup_placeholder.pdf}
+  \captionof{figure}{%
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+    Placeholder benchmark plot comparing naïve and optimized 
+    Julia implementations for a Rossler-type ODE system.}
+\end{center}
+
+\medskip
+
+\noindent
+Curabitur sit amet convallis urna. Aenean ultricies, mauris at dignissim
+egestas, metus orci rhoncus urna, vitae tempor elit arcu ut orci. Integer
+ullamcorper, ligula in lacinia pretium, lacus lorem sollicitudin nisi, non
+elementum velit lectus at ipsum.
+
+\medskip
+
+% --- Table placeholder: benchmark numbers ---
+\begin{center}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Method} & \textbf{Runtime (rel.)} & \textbf{Allocations (rel.)} & \textbf{Speedup} \\
+    \midrule
+    Naïve Julia      & 1.00 & 1.00 & $1.0\times$ \\
+    Optimized Julia  & 0.12 & 0.05 & $8.3\times$ \\
+    SciML baseline   & 0.10 & 0.04 & $10.0\times$ \\
+    \bottomrule
+  \end{tabular}
+  \captionof{table}{%
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+    Placeholder benchmark table comparing relative runtime, 
+    memory allocations, and overall speedup factors.}
+\end{center}
+
+\medskip
+
+\noindent
+Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac
+turpis egestas. Sed posuere consectetur est at lobortis. Vestibulum id ligula
+porta felis euismod semper.
+
+%------------------------ DISCUSSION / OPEN PROBLEMS ------------------------
+\section*{Discussion / Open Problems}
+
+\noindent
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer in lacus nec
+odio commodo condimentum. Pellentesque vitae elit at lacus vulputate posuere.
+Morbi laoreet, justo at varius hendrerit, justo nisi consequat nisl, non
+tincidunt neque augue quis leo. Sed viverra urna id dui pulvinar, non gravida
+nisl viverra.
+
+\medskip
+
+% --- Figure placeholder: future work / design sketch ---
+\begin{center}
+  \includegraphics[width=0.85\linewidth]{futurework_placeholder.pdf}
+  \captionof{figure}{%
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+    Placeholder conceptual diagram for future extensions 
+    (e.g., GPU acceleration, parameter sweeps, or PDE MOL extensions).}
+\end{center}
+
+\medskip
+
+\noindent
+Suspendisse ut leo nec nibh ultricies finibus. Sed euismod, nisl vel tempor
+mattis, metus arcu pulvinar turpis, sed luctus odio tellus id massa. Donec in
+lectus vitae sapien iaculis volutpat quis in neque. Cras mattis consectetur
+purus sit amet fermentum.
+
+%------------------------ REFERENCES ------------------------
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{mybib}
+
+\end{multicols}
+\end{document}
