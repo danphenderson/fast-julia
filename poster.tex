@@ -51,7 +51,7 @@
 
 \begin{minipage}[b]{0.55\linewidth}
   \raggedright
-  \veryHuge \color{PMS310C} \textbf{POC to Production} \color{Black}\\[0.4cm]
+  \veryHuge \color{PMS310C} \textbf{Proof-of-Concept to Production} \color{Black}\\[0.4cm]
   \Huge\textit{Fast Julia Dynamical Systems}\\[0.8cm]
 \end{minipage}
 \hfill
@@ -75,6 +75,8 @@
 \hrulefill
 
 %----------------------------------------------------------------------------------------
+%	MAIN BODY
+%----------------------------------------------------------------------------------------
 
 \begin{multicols}{3} % This is how many columns your poster will be broken into, 
 % a poster with many figures may benefit from less columns whereas a text-heavy poster benefits from more
@@ -82,28 +84,73 @@
 %----------------------------------------------------------------------------------------
 %	ABSTRACT
 %----------------------------------------------------------------------------------------
-
 \begin{abstract}
-  \noindent Comparison of niave to production implementations for solve small system
-  of ODEs $(< 100)$ (why less than 100?)
+  \noindent
+  We compare naïve and optimized Julia implementations for solving 
+  small to moderate systems of ordinary differential equations 
+  (up to $\mathcal{O}(10^2)$ state variables). Using 
+  \texttt{DifferentialEquations.jl} and standard performance tools, 
+  we demonstrate how a sequence of targeted changes---in-place updates, 
+  type stability, and solver selection---can yield order-of-magnitude 
+  speedups while preserving code clarity and reproducibility.
 \end{abstract}
 
 %----------------------------------------------------------------------------------------
-
+% Content Structure
+%----------------------------------------------------------------------------------------
 \section*{Introduction}
+\noindent
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
+incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu
+fugiat nulla pariatur.
 
+\medskip
+
+\noindent
+Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia
+deserunt mollit anim id est laborum. Integer nec odio. Praesent libero. Sed
+cursus ante dapibus diam. Sed nisi. Nulla quis sem at nibh elementum imperdiet.
 
 \section*{Results/Analysis}
+\noindent
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris fermentum
+facilisis ligula, id hendrerit lectus gravida sed. Vestibulum ante ipsum primis
+in faucibus orci luctus et ultrices posuere cubilia curae; Sed aliquet, erat
+vel volutpat tempor, urna lorem vehicula elit, ut facilisis neque enim sed
+massa. Suspendisse potenti.
+
+\medskip
+
+\noindent
+Curabitur sit amet convallis urna. Aenean ultricies, mauris at dignissim
+egestas, metus orci rhoncus urna, vitae tempor elit arcu ut orci. Integer
+ullamcorper, ligula in lacinia pretium, lacus lorem sollicitudin nisi, non
+elementum velit lectus at ipsum. Pellentesque habitant morbi tristique
+senectus et netus et malesuada fames ac turpis egestas.
 
 \section*{Discussion/Open Problems}
+\noindent
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer in lacus nec
+odio commodo condimentum. Pellentesque vitae elit at lacus vulputate posuere.
+Morbi laoreet, justo at varius hendrerit, justo nisi consequat nisl, non
+tincidunt neque augue quis leo. Sed viverra urna id dui pulvinar, non gravida
+nisl viverra.
 
- %----------------------------------------------------------------------------------------
+\medskip
+
+\noindent
+Suspendisse ut leo nec nibh ultricies finibus. Sed euismod, nisl vel tempor
+mattis, metus arcu pulvinar turpis, sed luctus odio tellus id massa. Donec in
+lectus vitae sapien iaculis volutpat quis in neque.
+
+%----------------------------------------------------------------------------------------
 %	REFERENCES
 %----------------------------------------------------------------------------------------
 \nocite{*} % Print all references regardless of whether they were cited in the poster or not
 \bibliographystyle{plain} % Plain referencing style
 \bibliography{mybib} % Use the example bibliography file sample.bib
-
 
 \end{multicols}
 \end{document}
