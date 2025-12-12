@@ -104,7 +104,7 @@ function rossler_annotated(vx::AbstractVector{T}, p::AbstractVector{T}, t) where
     return [dx1, dx2, dx3]
 end
 
-benchmark_annotated(driver::BenchmarkDriver = benchmark_driver()) =å
+benchmark_annotated(driver::BenchmarkDriver = benchmark_driver()) =
     benchmark_ode(driver, rossler_annotated, [1.0, 1.0, 1.0])
 
 """

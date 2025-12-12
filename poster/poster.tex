@@ -74,9 +74,10 @@ and performance-conscious model system code.
 \medskip
 
 \noindent
-\texttt{DifferentialEquations.jl} (SciML) provides high-performance solvers for
-ordinary, stochastic, delay, and partial differential equations and ranks among
-the fastest across languages. We distill the SciML optimization tutorial by:
+\texttt{DifferentialEquations.jl} (by SciML organization) is widely used for 
+performant ODE solving in Julia \cite{DifferentialEquations.jl-2017},
+built on the Julia language design \cite{Julia-2017}. We distill the SciML 
+optimization tutorial by:
 \begin{itemize}
   \item benchmarking naïve vs.\ optimized Julia code on a small nonstiff R\"ossler system;
   \item removing allocations and ensuring type stability via in-place updates,
@@ -241,8 +242,6 @@ Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet
 rutrum faucibus dolor auctor. Integer posuere erat a ante venenatis dapibus
 posuere velit aliquet.
 
-% --- END MIDDLE COLUMN
-\switchcolumn
 
 %------------------------ RESULTS / ANALYSIS ------------------------
 \section*{Results/Analysis}
@@ -264,6 +263,9 @@ massa. Suspendisse potenti.
     Placeholder benchmark plot comparing naïve and optimized 
     Julia implementations for a Rössler-type ODE system.}
 \end{center}
+
+% --- END MIDDLE COLUMN
+\switchcolumn
 
 \medskip
 
