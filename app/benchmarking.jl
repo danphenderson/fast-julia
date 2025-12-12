@@ -47,9 +47,9 @@ function rossler_static(vx, vp, t)
 end
 
 # ----------------------------
-# Benchmark harness helpers
+# Fixed-step RK4 benchmark harness
 # ----------------------------
-Base.@kwdef mutable struct BenchmarkDriver{S}
+Base.@kwdef mutable struct RK4BenchDriver{S}
     tspan::Tuple{Float64,Float64} = (0.0, 50.0)
     saveat::S = 0.0:0.1:50.0
     dt::Float64 = 1e-4
@@ -57,50 +57,28 @@ Base.@kwdef mutable struct BenchmarkDriver{S}
     save_everystep::Bool = false
     abs_tol::Float64 = 1e-6
     rel_tol::Float64 = 1e-6
-    dense::Bool = false
 end
 
-Base.@kwdef struct ModelSpec{F,U,P}
-    name::String
-    rhs::F
-    u0::U
-    p::P
-    tspan::Tuple{Float64,Float64}
-end
+odeprob(sys; u0, p, tspan) = ODEProblem(sys, u0, tspan, p)
 
-Base.@kwdef struct IntegratorSpec{A,K}
-    name::String
-    alg::A
-    solve_kwargs::K = (;)
-end
-
-Base.@kwdef struct BenchmarkPlan{M,I}
-    models::Vector{M}
-    integrators::Vector{I}
-    driver::BenchmarkDriver = BenchmarkDriver()
-end
-
-odeprob(model::ModelSpec) = ODEProblem(model.rhs, model.u0, model.tspan, model.p)
-
-function run_trial(model::ModelSpec, integrator::IntegratorSpec, driver::BenchmarkDriver)
-    prob = odeprob(model)
-    driver_kwargs = (
-        saveat=driver.saveat,
-        save_everystep=driver.save_everystep,
-        dense=driver.dense,
-        maxiters=driver.maxiters,
-        abstol=driver.abs_tol,
-        reltol=driver.rel_tol,
-    )
-
-    kwargs = (; driver_kwargs..., integrator.solve_kwargs...)
+function benchmark_fixed_rk4(driver::RK4BenchDriver, sys; u0, p)
+    prob = odeprob(sys; u0=u0, p=p, tspan=driver.tspan)
+    alg = RK4()
 
     # warm-up compile (avoid counting JIT)
-    solve(prob, integrator.alg; kwargs...)
+    solve(prob, alg; adaptive=false, dt=driver.dt, saveat=driver.saveat,
+          save_everystep=false, dense=false, maxiters=driver.maxiters)
 
     return @benchmark solve(
-        $prob, $integrator.alg;
-        $(kwargs...)
+        $prob, $alg;
+        adaptive=false,
+        dt=$(driver.dt),
+        saveat=$(driver.saveat),
+        save_everystep=$(driver.save_everystep),
+        dense=false,
+        maxiters=$(driver.maxiters),
+        abstol=$(driver.abs_tol),
+        reltol=$(driver.rel_tol),
     )
 end
 
@@ -109,11 +87,12 @@ _trial_metrics(tr) = begin
     (time_ns = est.time, allocs = est.allocs, memory = est.memory)
 end
 
-function _print_raw_metrics(entries)
+function _print_raw_metrics(labels::AbstractVector{<:AbstractString},
+                           metrics::AbstractDict{<:AbstractString,<:NamedTuple})
     println("\nRaw (median) metrics:")
-    for entry in entries
-        m = entry.metrics
-        println(rpad(entry.label, 24),
+    for k in labels
+        m = metrics[k]
+        println(rpad(k, 24),
                 "  time = ", m.time_ns, " ns",
                 "   allocs = ", m.allocs,
                 "   bytes = ", m.memory)
@@ -143,77 +122,53 @@ function _plot_normalized_bar(labels, norm_values;
 end
 
 function run_rk4_benchmarks(; driver=RK4BenchDriver(),
-                           p_vec=[0.1, 0.1, 14], p_svec=@SVector [0.1, 0.1, 14])
+                            p_vec=[0.1, 0.1, 14], p_svec=@SVector[0.1, 0.1, 14])
 
     methods = [
-        (label="naive (Vector OOP)",   func=rossler,        u0=[1.0, 1.0, 1.0],               p=p_vec),
-        (label="in-place (!)",         func=rossler!,       u0=[1.0, 1.0, 1.0],               p=p_vec),
-        (label="static (SVector OOP)", func=rossler_static, u0=(@SVector [1.0, 1.0, 1.0]), p=p_svec),
+        ("naive (Vector OOP)",   rossler,          [1.0, 1.0, 1.0], p_vec),
+        ("in-place (!)",         rossler!,         [1.0, 1.0, 1.0], p_vec),
+        ("static (SVector OOP)", rossler_static,   (@SVector [1.0, 1.0, 1.0]), p_svec),
     ]
 
-    entries = NamedTuple{(:label, :trial, :metrics)}[]
+    trials = Dict{String,Any}()
+    metrics = Dict{String,NamedTuple}()
 
-    for spec in methods
-        tr = Base.invokelatest(benchmark_fixed_rk4, driver, spec.func; u0=spec.u0, p=spec.p)
-        push!(entries, (label=spec.label, trial=tr, metrics=_trial_metrics(tr)))
+    for (name, f, u0, p) in methods
+        tr = Base.invokelatest(benchmark_fixed_rk4, driver, f; u0=u0, p=p)
+        trials[name] = tr
+        metrics[name] = _trial_metrics(tr)
     end
 
-    trials = Dict(entry.label => entry.trial for entry in entries)
-    metrics = Dict(entry.label => entry.metrics for entry in entries)
+    labels = collect(keys(metrics))
 
-    labels = getproperty.(entries, :label)
-
-    times  = [entry.metrics.time_ns for entry in entries]
-    allocs = [entry.metrics.allocs  for entry in entries]
+    times  = [metrics[k].time_ns for k in labels]
+    allocs = [metrics[k].allocs  for k in labels]
 
     # Normalize to best (minimum) per metric.
     time_norm  = times ./ minimum(times)
     alloc_norm = allocs ./ minimum(allocs)
 
-    _print_raw_metrics(entries)
+    _print_raw_metrics(labels, metrics)
 
     p_time = _plot_normalized_bar(
         labels, time_norm;
-        title="Normalized wall-clock time (median, log10)",
+        title="RK4 fixed-step: Normalized wall-clock time (median, log10)",
         ylabel="Time (× best)",
         filename="rk4_time_normalized_log10.png",
     )
 
     p_alloc = _plot_normalized_bar(
         labels, alloc_norm;
-        title="Normalized allocations (median, log10)",
+        title="RK4 fixed-step: Normalized allocations (median, log10)",
         ylabel="Allocations (× best)",
         filename="rk4_allocs_normalized_log10.png",
     )
 
     println("\nSaved figures: rk4_time_normalized_log10.png, rk4_allocs_normalized_log10.png")
 
-    return (entries=entries, trials=trials, metrics=metrics, time_norm=time_norm,
-            alloc_norm=alloc_norm, p_time=p_time, p_alloc=p_alloc)
+    return (trials=trials, metrics=metrics, time_norm=time_norm, alloc_norm=alloc_norm,
+            p_time=p_time, p_alloc=p_alloc)
 end
-
-function default_benchmark_plan(; driver=BenchmarkDriver(),
-                                p_vec=[0.1, 0.1, 14], p_svec=@SVector[0.1, 0.1, 14])
-    models = [
-        ModelSpec(name="naive (Vector OOP)", rhs=rossler, u0=[1.0, 1.0, 1.0],
-                  p=p_vec, tspan=driver.tspan),
-        ModelSpec(name="in-place (!)", rhs=rossler!, u0=[1.0, 1.0, 1.0],
-                  p=p_vec, tspan=driver.tspan),
-        ModelSpec(name="static (SVector OOP)", rhs=rossler_static,
-                  u0=@SVector [1.0, 1.0, 1.0], p=p_svec, tspan=driver.tspan),
-    ]
-
-    integrators = [
-        IntegratorSpec(name="RK4 fixed-step", alg=RK4(),
-                       solve_kwargs=(; adaptive=false, dt=driver.dt)),
-    ]
-
-    return BenchmarkPlan(models=models, integrators=integrators, driver=driver)
-end
-
-run_rk4_benchmarks(; driver=BenchmarkDriver(), p_vec=[0.1, 0.1, 14],
-                   p_svec=@SVector[0.1, 0.1, 14]) =
-    run_benchmarks(default_benchmark_plan(; driver=driver, p_vec=p_vec, p_svec=p_svec))
 
 # If you want this to run when executed as a script:
 if abspath(PROGRAM_FILE) == @__FILE__
