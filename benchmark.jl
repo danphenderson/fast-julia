@@ -1,3 +1,7 @@
+using BenchmarkTools
+using DifferentialEquations
+using StaticArrays
+
 # Use a parametric, immutable driver to avoid abstract fields while allowing ranges for `saveat`.
 struct BenchmarkDriver{S<:AbstractVector{Float64}}
     abstol::Float64
@@ -77,11 +81,11 @@ Performance notes:
 - Each RK stage triggers an allocation, increasing GC pressure.
 - Type-stable for concrete inputs (returns `Vector{Float64}` with Float64 inputs).
 """
-function rossler(u, p, t)
-    dx = -u[2] - u[3]
-    dy = u[1] + p[1] * u[2]
-    dz = p[2] + u[1] * u[2] - p[3] * u[3]
-    return [dx, dy, dz]
+function rossler(vx, vp, t)
+    dx1 = -vx[2] - vx[3]
+    dx2 = vx[1] + vp[1] * vx[2]
+    dx3 = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+    return [dx1, dx2, dx3]
 end
 
 benchmark_naive(driver::BenchmarkDriver = benchmark_driver()) =
@@ -94,10 +98,10 @@ Notes:
 - Avoids forcing `t` to have the same type as `u`'s element type (helps AD / dual numbers).
 """
 function rossler_annotated(u::AbstractVector{T}, p::AbstractVector{T}, t) where {T<:Real}
-    dx = -u[2] - u[3]
-    dy = u[1] + p[1] * u[2]
-    dz = p[2] + u[1] * u[2] - p[3] * u[3]
-    return T[dx, dy, dz]
+    dx1 = -vx[2] - vx[3]
+    dx2 = vx[1] + vp[1] * vx[2]
+    dx3 = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+    return [dx1, dx2, dx3]
 end
 
 benchmark_annotated(driver::BenchmarkDriver = benchmark_driver()) =

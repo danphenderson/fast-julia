@@ -1,9 +1,10 @@
 \documentclass[a0,landscape]{a0poster}
 \input{preamble.tex} % after the basics
 \definecolor{PMS310C}{RGB}{62,192,197} % Official MTU colorway
+
+
+
 \begin{document}
-
-
 %----------------------------------------------------------------------------------------
 % HEADER
 %----------------------------------------------------------------------------------------
@@ -48,12 +49,6 @@
 %----------------------------------------------------------------------------------------
 \begin{multicols}{3}
 
-%------------------------ ABSTRACT ------------------------
-% (moved to header)
-% \begin{abstract}
-%   ...
-% \end{abstract}
-
 %------------------------ INTRODUCTION ------------------------
 \section*{Introduction}
 
@@ -90,9 +85,10 @@ the fastest across languages. We distill the SciML optimization tutorial by:
 Together, these examples chart a practical path from prototype to production-ready
 
 \medskip
-\hrulefill
-\medskip
 
+\hrulefill
+
+\medskip
 
 % --- Figure placeholder: overview / pipeline ---
 \medskip
@@ -103,7 +99,9 @@ Together, these examples chart a practical path from prototype to production-rea
     Placeholder overview diagram of the proof-of-concept to 
     production ODE solver workflow.}
 \end{center}
-\medskip
+
+% --- END FIRST COLUMN
+\columnbreak
 
 % ------------------------ Ideally: Start of Middle Column ------------------------
 \noindent
@@ -113,9 +111,9 @@ behavior:
   \tag{Rössler} \label{eq:rossler}%
   \qquad \vx'(t) = \vf(\vx, t; \vp) = 
   \vect{
-    -\vx_2 - \vx_3 \\
-    \vx_1 + a \vx_2 \\
-    b + \vx_1 \vx_2 - c \vx_3
+    -x_2 - x_3 \\
+    x_1 + a x_2 \\
+    b + x_1 x_2 - c x_3
   }
     ~ : ~ \begin{cases*}
     \vx = (x_1, x_2, x_3)^\top ~(\text{state variables})\\
@@ -125,7 +123,8 @@ behavior:
 
 \medskip
 
-% Out Of Place.
+
+\noindent
 Various was to implement \ref{eq:rossler} in Julia:
 \begin{lstlisting}[
     language=Julia, 
@@ -134,10 +133,10 @@ Various was to implement \ref{eq:rossler} in Julia:
     label={lst:naive-out-of-place}
   ]
 function rossler(vx, vp, t)
-    dx = -vx[2] - vx[3]
-    dy = vx[1] + vp[1] * vx[2]
-    dz = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
-    return [dx, dy, dz]
+    dx1 = -vx[2] - vx[3]
+    dx2 = vx[1] + vp[1] * vx[2]
+    dx3 = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+    return [dx1, dx2, dx3]
 end
 \end{lstlisting}
 % In Place
