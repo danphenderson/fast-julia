@@ -111,3 +111,12 @@ flowchart TD
     Error Tolerance`"]
     markdown --> newLines
 ```
+
+```mermaid
+flowchart LR
+  %% ------------------------------------------------------------
+  %% ODE Pipeline (Model → Implement → Solve → Analyze → Deliver)
+  %% ------------------------------------------------------------
+
+  
+```

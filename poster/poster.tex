@@ -90,37 +90,33 @@ by Otto Rössler in 1976 \cite{Rössler-1976}.
 \medskip
 
 \noindent
-We seek numerical solution $\vx(t) ~ \forall t \in [t_0, t_f]$ subject to $\vx(t_0) = \vx_0$,
-with parameters $\vp$ fixed via \texttt{DifferentialEquations.jl} (by SciML organization)--
-performant ODE solving \cite{DifferentialEquations.jl-2017},
-built on the Julia language design \cite{Julia-2017}. We build on the SciML 
-tutorial~\cite{SciMLTutorial} for the Rössler system, but with a focus on code
-optimization and performance tuning.
+We seek $\vx(t)$ for all $t \in [t_0, t_f]$ subject to $\vx(t_0)=\vx_0$, with fixed
+parameters $\vp$. ``Production`` performance is achieved using \texttt{DifferentialEquations.jl} (SciML)
+\cite{DifferentialEquations.jl-2017}, building on the SciML techniques
+\cite{SciMLTutorial} for optimizing the model code $\vf$.
 
 \medskip
 
 \noindent
-\textbf{Case Study 1: Rossler System.}
+\textbf{Case Study 1.} Compares out-of-place vs.\ in-place Julia implementations
+of the Rössler system (\ref{eq:rossler}), and a type-stable fixed-size variant:
 \begin{itemize}
-  \item naive ``out-of-place'' Julia code;
-  \item optimization with in-place updates and stack-allocated arrays;
+  \item naïve out-of-place code allocates a new array each RHS call, triggering garbage collection;
+  \item optimized in-place code eliminates per-call allocations for \texttt{Vector}-based states; and
+  \item a \texttt{StaticArrays.jl} / \texttt{SVector} implementation enables stack allocation, often fastest for very small systems.
 \end{itemize}
-\textbf{Case Study 2: Parameter Sweep of Rossler System}
-\begin{itemize}
-  \item parameter sweep over $\vp$ using fused broadcasts, BLAS operations, and
-        matrix-free stencils; and
-  \item demonstrating how solver choice (explicit Runge--Kutta vs.\ implicit BDFk) further
-        amplifies these gains, especially for stiff problems.
-\end{itemize}
-
-\medskip
 
 \noindent
-``Production'' performance is acheived by optimization of the umderlying model
-code -- our focus herein, rather than on the integrator itself.
+\textbf{Case Study 2.} Performs parameter sweep over $\vp$ requires solving many independent ODE instances.
+We use Julia broadcasting and array programming to reduce overhead:
+\begin{itemize}
+  \item fused broadcasts, BLAS operations, and matrix-free stencils to avoid per-step allocations; and
+  \item solver choice (explicit Runge--Kutta vs.\ implicit BDF methods) to further improve performance for stiff problems.
+\end{itemize}
 
-\medskip
-
+\noindent
+\textbf{Future of SciML is Symbolic--Numeric.} We discuss how symbolic manipulation
+simplifies (\ref{eq:rossler}) via substitution, highlighting structure (two linear equations in $\vx$ and one quadratic).
 
 \medskip
 \hrulefill
