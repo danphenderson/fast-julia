@@ -1,61 +1,59 @@
 \documentclass[a0,landscape]{a0poster}
-\usepackage{times}
 \input{preamble.tex} % after the basics
-
 \definecolor{PMS310C}{RGB}{62,192,197} % Official MTU colorway
+
+
+
 \begin{document}
-% ...existing code...
+\begin{tikzpicture}[remember picture,overlay]
+  \node[anchor=north east, xshift=-5mm, yshift=-5mm] 
+    at (current page.north east) {\includegraphics[height=7cm]{logo.png}};
+\end{tikzpicture}
+
 %----------------------------------------------------------------------------------------
 % HEADER
 %----------------------------------------------------------------------------------------
-\begin{minipage}[t]{0.35\linewidth}
-  \raggedright
-  \veryHuge \color{PMS310C} \textbf{Proof-Of-Concept to Production} \color{Black}\\[0.4cm]
-  \Huge\textit{Fast Julia Differential Equation Solving}\\[0.8cm]
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.34\linewidth}
-  \raggedright
-  {\Large\textbf{Abstract}}\par\smallskip
-  {\large
-  We compare naïve and optimized Julia implementations for solving
-  small to moderate systems of ordinary differential equations
-  $\vx'(t) = \vf(\vx, t) \, : \, \dim(\vx) \leq 10^2$
-  using \texttt{DifferentialEquations.jl}. We demonstrate how a sequence
-  of targeted changes---in-place updates, type stability, and solver selection---can yield order-of-magnitude
-  speedups while preserving code clarity and reproducibility (for both sparse and dense systems).
-  }
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.18\linewidth}
-  \raggedright
-  \red{\Large \textbf{Contact Information:}\\[0.25cm]
-  Daniel Henderson\\
-  Michigan Technological University\\
-  Department of Mathematical Sciences\\
-  Houghton, MI\\
-  Email: \texttt{dphender@mtu.edu}}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.08\linewidth}
-  \raggedleft
-  \vspace{0.4cm}
-  \includegraphics[width=\linewidth]{logo.png}
-\end{minipage}
+\vspace*{-2cm} % reduce magnitude if anything touches the top edge
 
-\vspace{1cm}
+{\setlength{\tabcolsep}{0pt}%
+\renewcommand{\arraystretch}{1.05}%
+
+\noindent
+\begin{minipage}[t]{0.34\textwidth}
+  {\Huge\bfseries\color{PMS310C} POC to Production}\\[1ex]
+  {\Large\itshape Fast Julia Differential Equation Solving}\\[2ex]
+  {\large Daniel Henderson}\\
+  {\normalsize Michigan Technological University}\\
+  {\small\ttfamily dphender@mtu.edu}
+\end{minipage}%
+\begin{minipage}[t]{0.24\textwidth}\vspace{0pt}
+{\Large\textbf{Abstract}}
+{\normalsize
+We compare naïve and optimized Julia implementations for solving
+small to moderate systems of ODEs
+$\vx'(t) = \vf(\vx, t) \, : \, \dim(\vx) \leq 10^2$.
+We demonstrate how a sequence of targeted changes---in-place updates, type stability, and
+solver selection---can yield order-of-magnitude speedups while preserving code clarity and
+reproducibility. By applying these techniques, we achieve a 10x speedup over the original
+code and demonstrate how to scale up to larger systems.}
+\end{minipage}
+}
+
+\vspace{0.20cm}
 \hrulefill
+\vspace{0.20cm}
 
 %----------------------------------------------------------------------------------------
 % BODY (3 COLUMNS)
 %----------------------------------------------------------------------------------------
-\begin{multicols}{3}
+% ...existing code...
 
-%------------------------ ABSTRACT ------------------------
-% (moved to header)
-% \begin{abstract}
-%   ...
-% \end{abstract}
+%----------------------------------------------------------------------------------------
+% BODY (3 COLUMNS)
+%----------------------------------------------------------------------------------------
+\begin{paracol}{3}
+  \setcolumnwidth{0.28\textwidth,0.44\textwidth,0.28\textwidth}
+
 
 %------------------------ INTRODUCTION ------------------------
 \section*{Introduction}
@@ -69,20 +67,45 @@ even modest inefficiencies can waste substantial time and memory.
 \medskip
 
 \noindent
-Many users—especially those coming from MATLAB, SciPy, or R—write ODE
-right-hand sides in an out-of-place, vectorized style that allocates
-temporary arrays, copies data via slicing, and depends on dynamic types or
-globals. While convenient for prototypes, this leads to heavy allocation and
-garbage collection, and scales poorly for long runs or ensembles. Achieving
-``production'' performance therefore requires both an appropriate integrator
-and performance-conscious model code.
+We demonstrate how to optimize a simple ODE solver pipeline from prototype to
+production using Julia, a high-level, high-performance language for numerical
+computation \cite{Julia-2017}. Our first case study focuses on the chaotic
+system
+\begin{flalign*}
+  \tag{Rössler} \label{eq:rossler}
+  \qquad \vx'(t) = \vf(\vx, t; \vp) = 
+  \vect{
+    -x_2 - x_3 \\
+    x_1 + a x_2 \\
+    b + x_3 (x_1 - c) \\
+  }
+    ~ : ~ \begin{cases*}
+    \vx = (x_1, x_2, x_3)^\top ~(\text{state variables})\\
+    \vp = (a, b, c)^\top ~(\text{parameters}) \\
+  \end{cases*}, &&
+\end{flalign*}
+introduced as a simplification of the Lorenz attractor
+by Otto Rössler in 1976 \cite{Rössler-1976} (commonly used
+parameters $a = b = 0.1, c=15$).
 
 \medskip
 
 \noindent
-\texttt{DifferentialEquations.jl} (SciML) provides high-performance solvers for
-ordinary, stochastic, delay, and partial differential equations and ranks among
-the fastest across languages. We distill the SciML optimization tutorial by:
+Many users—especially those coming from MATLAB, SciPy, or R—write ODE
+right-hand sides in an out-of-place, or vectorized style, that allocates
+temporary arrays, copies data via slicing, and depends on dynamic types or
+globals. While convenient for prototypes, this leads to heavy allocation and
+garbage collection, and scales poorly for long runs or ensembles. Achieving
+``production'' performance therefore requires both an appropriate integrator
+and performance-conscious model system code.
+
+\medskip
+
+\noindent
+\texttt{DifferentialEquations.jl} (by SciML organization) is widely used for 
+performant ODE solving in Julia \cite{DifferentialEquations.jl-2017},
+built on the Julia language design \cite{Julia-2017}. We distill the SciML 
+optimization tutorial by:
 \begin{itemize}
   \item benchmarking naïve vs.\ optimized Julia code on a small nonstiff R\"ossler system;
   \item removing allocations and ensuring type stability via in-place updates,
@@ -93,9 +116,10 @@ the fastest across languages. We distill the SciML optimization tutorial by:
 Together, these examples chart a practical path from prototype to production-ready
 
 \medskip
-\hrulefill
-\medskip
 
+\hrulefill
+
+\medskip
 
 % --- Figure placeholder: overview / pipeline ---
 \medskip
@@ -106,52 +130,75 @@ Together, these examples chart a practical path from prototype to production-rea
     Placeholder overview diagram of the proof-of-concept to 
     production ODE solver workflow.}
 \end{center}
-\medskip
+
+% --- END FIRST COLUMN
+\switchcolumn
+
 
 % ------------------------ Ideally: Start of Middle Column ------------------------
 \noindent
-The Rössler system is a well-known nonstiff autonomous ODE that exhibits chaotic
-behavior:
-\begin{flalign*}
-  \tag{Rössler} \label{eq:rossler}%
-  \qquad \vx'(t) = \vf(\vx, t; \vp) = 
-  \vect{
-    -\vx_2 - \vx_3 \\
-    \vx_1 + a \vx_2 \\
-    b + \vx_1 \vx_2 - c \vx_3
-  }
-    ~ : ~ \begin{cases*}
-    \vx = (x_1, x_2, x_3)^\top ~(\text{state variables})\\
-    \vp = (a, b, c)^\top ~(\text{parameters}) \\
-  \end{cases*}. &&
-\end{flalign*}
-
+\begin{minipage}{\linewidth}
+\centering
+\begin{minipage}[t]{0.475\linewidth} % Left: out-of-place
 \begin{lstlisting}[
-    language=Julia, 
-    caption={Naïve ``out-of-place`` Julia implementation of the \ref{eq:rossler} system.},
-    label={lst:naive}
-  ]
-  function rossler(vx, vp, t)
-    dx = -vx[2] - vx[3]
-    dy = vx[1] + vp[1] * vx[2]
-    dz = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
-    return [dx, dy, dz]
-  end
-\end{lstlisting}\todo{show lowered code}
-
-
-\begin{itemize}
-  \item Code~\ref{lst:naive} defines the Rössler system in a vectorized, out-of-place style,
-  it is clear and concise, but it allocates a new vector to the heap at each step,
-  which triggers garbage collection and slows down the solver.
-  \item Code
-\end{itemize}
-
+  language=Julia,
+  linewidth=\linewidth,
+  breaklines=true,
+  caption={``Out-of-place`` allocates a new heap array each call.},
+  label={lst:naive-out-of-place}
+]
+function rossler(vx, vp, t)
+    dx1 = -vx[2] - vx[3]
+    dx2 =  vx[1] + vp[1] * vx[2]
+    dx3 =  vp[2] + vx[3] * (vx[1] - vp[3])
+    return [dx1, dx2, dx3]
+end
+\end{lstlisting}
+\td{\small \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
+  reports 240 bytes per call (typical).}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.475\linewidth} % Right: in-place
+\begin{lstlisting}[
+  language=Julia,
+  linewidth=\linewidth,
+  breaklines=true,
+  caption={``In-place`` ODE system, utilizing cache array (`vx` passed-by-reference)
+  for state values. Avoids per-call allocations and typically fastest for `Vector`-based states.},
+  label={lst:in-place}
+]
+function rossler!(dx, vx, vp, t)
+    x1 = vx[1]
+    dx[1] = -vx[2] - vx[3]
+    dx[2] =  x1 + vp[1] * vx[2]
+    dx[3] =  vp[2] + vx[3] * (x1 - vp[3])
+    return nothing
+end
+\end{lstlisting}
+\end{minipage}
+\vspace{0.75em}
+\begin{lstlisting}[
+  language=Julia,
+  linewidth=\linewidth,
+  breaklines=true,
+  caption={Fixed-size, stack-allocated \texttt{\cite{StaticArrays.jl-2017}} version.},
+  label={lst:static}
+]
+function rossler_static(vx, vp, t)
+    x1 = vx[1]
+    dx1 = -vx[2] - vx[3]
+    dx2 =  x1 + vp[1] * vx[2]
+    dx3 =  vp[2] + vx[3] * (x1 - vp[3])
+    return @SVector [dx1, dx2, dx3]
+end
+\end{lstlisting}
+\end{minipage}
 
 \noindent
 Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet
 rutrum faucibus dolor auctor. Integer posuere erat a ante venenatis dapibus
 posuere velit aliquet.
+
 
 %------------------------ RESULTS / ANALYSIS ------------------------
 \section*{Results/Analysis}
@@ -165,14 +212,29 @@ massa. Suspendisse potenti.
 
 \medskip
 
-% --- Figure placeholder: speedup plot ---
-\begin{center}
-  \includegraphics[width=0.95\linewidth]{speedup_placeholder.pdf}
+% --- Figure placeholder: speedup plot ---'
+\noindent
+\begin{minipage}{\linewidth}
+\centering
+\begin{minipage}[t]{0.475\linewidth} % Left: out-of-place
+  \includegraphics[width=0.95\linewidth]{rk4_time_normalized.png}
   \captionof{figure}{%
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
     Placeholder benchmark plot comparing naïve and optimized 
     Julia implementations for a Rössler-type ODE system.}
-\end{center}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.475\linewidth} % Right: in-place
+  \includegraphics[width=0.95\linewidth]{rk4_time_normalized.png}
+  \captionof{figure}{%
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+    Placeholder benchmark plot comparing naïve and optimized 
+    Julia implementations for a Rössler-type ODE system.}
+\end{minipage}
+\end{minipage}
+
+% --- END MIDDLE COLUMN
+\switchcolumn
 
 \medskip
 
@@ -242,5 +304,5 @@ purus sit amet fermentum.
 \bibliographystyle{plain}
 \bibliography{mybib}
 
-\end{multicols}
+\end{paracol}
 \end{document}

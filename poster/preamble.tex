@@ -2,7 +2,7 @@
 \usepackage[utf8]{inputenc}
 \usepackage{array}
 \usepackage{setspace}
-\usepackage{multicol}
+\usepackage{paracol}
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{booktabs}
@@ -10,6 +10,7 @@
 \usepackage{fancybox}
 \usepackage{todonotes}
 \usepackage[dvipsnames,svgnames]{xcolor} % unified color load
+\usepackage{iftex} % <-- add this
 \usepackage[font=small,labelfont=bf]{caption} % or comment this and keep poster’s caption line
 \usepackage{url}
 \usepackage{hyperref}
@@ -25,7 +26,14 @@
 \usepackage{mdframed}       % boxed theorems
 \usepackage{thmtools}       % couples well with mdframed
 \usepackage{capt-of}        % if you prefer \captionof
-
+\usepackage{times}
+% \usepackage[margin=1.5cm]{geometry} % try 1.5cm or 1.0cm
+\usepackage{enumitem} 
+\setlist[itemize]{nosep,leftmargin=*} % removes extra vertical space in itemize
+\usepackage[dvipsnames,svgnames]{xcolor}
+\usepackage{todonotes}
+\usepackage[T1]{fontenc}
+\usepackage{tabularx}
 
 % ---------- Page setup (skip for a0poster) ----------
 \makeatletter
@@ -38,6 +46,11 @@
 }{}
 \makeatother
 \renewcommand{\arraystretch}{1.25}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft \arraybackslash}p{#1}}
+
+\newlength{\HeaderLogoH}
+\setlength{\HeaderLogoH}{6cm} % <-- tune logo height here
 
 % --------- Code Listings ----------
 \captionsetup[lstlisting]{font={small}, labelfont={bf}, labelsep=colon}
