@@ -142,21 +142,24 @@ function _plot_normalized_bar(labels, norm_values;
     return p
 end
 
-function run_benchmarks(plan::BenchmarkPlan)
-    trials = Dict{String,Any}()
-    metrics = Dict{String,NamedTuple}()
-    labels = String[]
+function run_rk4_benchmarks(; driver=RK4BenchDriver(),
+                           p_vec=[0.1, 0.1, 14], p_svec=@SVector [0.1, 0.1, 14])
 
-    for model in plan.models
-        for integrator in plan.integrators
-            label = "$(model.name) / $(integrator.name)"
-            push!(labels, label)
+    methods = [
+        (label="naive (Vector OOP)",   func=rossler,        u0=[1.0, 1.0, 1.0],               p=p_vec),
+        (label="in-place (!)",         func=rossler!,       u0=[1.0, 1.0, 1.0],               p=p_vec),
+        (label="static (SVector OOP)", func=rossler_static, u0=(@SVector [1.0, 1.0, 1.0]), p=p_svec),
+    ]
 
-            tr = Base.invokelatest(run_trial, model, integrator, plan.driver)
-            trials[label] = tr
-            metrics[label] = _trial_metrics(tr)
-        end
+    entries = NamedTuple{(:label, :trial, :metrics)}[]
+
+    for spec in methods
+        tr = Base.invokelatest(benchmark_fixed_rk4, driver, spec.func; u0=spec.u0, p=spec.p)
+        push!(entries, (label=spec.label, trial=tr, metrics=_trial_metrics(tr)))
     end
+
+    trials = Dict(entry.label => entry.trial for entry in entries)
+    metrics = Dict(entry.label => entry.metrics for entry in entries)
 
     labels = getproperty.(entries, :label)
 
@@ -185,7 +188,7 @@ function run_benchmarks(plan::BenchmarkPlan)
 
     println("\nSaved figures: rk4_time_normalized_log10.png, rk4_allocs_normalized_log10.png")
 
-    return (trials=trials, metrics=metrics, labels=labels, time_norm=time_norm,
+    return (entries=entries, trials=trials, metrics=metrics, time_norm=time_norm,
             alloc_norm=alloc_norm, p_time=p_time, p_alloc=p_alloc)
 end
 
