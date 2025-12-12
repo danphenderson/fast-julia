@@ -49,11 +49,10 @@ end
 # ----------------------------
 # Fixed-step RK4 benchmark harness
 # ----------------------------
-
-Base.@kwdef struct RK4BenchDriver{S}
+Base.@kwdef mutable struct RK4BenchDriver{S}
     tspan::Tuple{Float64,Float64} = (0.0, 50.0)
-    dt::Float64 = 1e-4
     saveat::S = 0.0:0.1:50.0
+    dt::Float64 = 1e-4
     maxiters::Int = 10^9
     save_everystep::Bool = false
     abs_tol::Float64 = 1e-6
@@ -121,6 +120,7 @@ function _plot_normalized_bar(labels, norm_values;
     savefig(p, filename)
     return p
 end
+
 function run_rk4_benchmarks(; driver=RK4BenchDriver(),
                             p_vec=[0.1, 0.1, 14], p_svec=@SVector[0.1, 0.1, 14])
 
@@ -134,7 +134,7 @@ function run_rk4_benchmarks(; driver=RK4BenchDriver(),
     metrics = Dict{String,NamedTuple}()
 
     for (name, f, u0, p) in methods
-        tr = benchmark_fixed_rk4(driver, f; u0=u0, p=p)
+        tr = Base.invokelatest(benchmark_fixed_rk4, driver, f; u0=u0, p=p)
         trials[name] = tr
         metrics[name] = _trial_metrics(tr)
     end
