@@ -5,44 +5,48 @@
 
 
 \begin{document}
+\begin{tikzpicture}[remember picture,overlay]
+  \node[anchor=north east, xshift=-5mm, yshift=-5mm] 
+    at (current page.north east) {\includegraphics[height=7cm]{logo.png}};
+\end{tikzpicture}
+
 %----------------------------------------------------------------------------------------
 % HEADER
 %----------------------------------------------------------------------------------------
-\begin{minipage}[t]{0.35\linewidth}
-  \raggedright
-  \veryHuge \color{PMS310C} \textbf{Proof-Of-Concept to Production} \color{Black}\\[0.4cm]
-  \Huge\textit{Fast Julia Differential Equation Solving}\\[0.8cm]
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.34\linewidth}
-  \raggedright
-  {\Large\textbf{Abstract}}\par\smallskip
-  {\large
-  We compare naïve and optimized Julia implementations for solving
-  small to moderate systems of ODEs
-  $\vx'(t) = \vf(\vx, t) \, : \, \dim(\vx) \leq 10^2$.
-  We demonstrate how a sequence of targeted changes---in-place updates, type stability, and solver selection---can yield order-of-magnitude
-  speedups while preserving code clarity and reproducibility. By applying these techniques, we achieve a 10x speedup over the original code and demonstrate how to scale up to larger systems.
-  }
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.18\linewidth}
-  \raggedleft
-  \red{\textbf{Contact Information:}\\[0.25cm]
-  Daniel Henderson\\
-  Michigan Technological University\\
-  Department of Mathematical Sciences\\
-  Houghton, MI\\
-  Email: \texttt{dphender@mtu.edu}}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.08\linewidth}
-  \raggedleft
-  \includegraphics[width=\linewidth]{logo.png}
-\end{minipage}
+\vspace*{-2cm} % reduce magnitude if anything touches the top edge
 
-\medskip
+{\setlength{\tabcolsep}{0pt}%
+\renewcommand{\arraystretch}{1.05}%
+
+\noindent
+\begin{minipage}[t]{0.34\textwidth}
+  {\Huge\bfseries\color{PMS310C} POC to Production}\\[1ex]
+  {\Large\itshape Fast Julia Differential Equation Solving}\\[2ex]
+  {\large Daniel Henderson}\\
+  {\normalsize Michigan Technological University}\\
+  {\small\ttfamily dphender@mtu.edu}
+\end{minipage}%
+\begin{minipage}[t]{0.24\textwidth}\vspace{0pt}
+{\Large\textbf{Abstract}}
+{\normalsize
+We compare naïve and optimized Julia implementations for solving
+small to moderate systems of ODEs
+$\vx'(t) = \vf(\vx, t) \, : \, \dim(\vx) \leq 10^2$.
+We demonstrate how a sequence of targeted changes---in-place updates, type stability, and
+solver selection---can yield order-of-magnitude speedups while preserving code clarity and
+reproducibility. By applying these techniques, we achieve a 10x speedup over the original
+code and demonstrate how to scale up to larger systems.}
+\end{minipage}
+}
+
+\vspace{0.20cm}
 \hrulefill
+\vspace{0.20cm}
+
+%----------------------------------------------------------------------------------------
+% BODY (3 COLUMNS)
+%----------------------------------------------------------------------------------------
+% ...existing code...
 
 %----------------------------------------------------------------------------------------
 % BODY (3 COLUMNS)
@@ -109,8 +113,7 @@ Together, these examples chart a practical path from prototype to production-rea
 
 % ------------------------ Ideally: Start of Middle Column ------------------------
 \noindent
-The Rössler system is a well-known nonstiff autonomous ODE that exhibits chaotic
-behavior:
+Various implementations of the well-known Rössler system:
 \begin{flalign*}
   \tag{Rössler} \label{eq:rossler}%
   \qquad \vx'(t) = \vf(\vx, t; \vp) = 
@@ -128,15 +131,9 @@ behavior:
 \medskip
 
 \noindent
-Various was to implement \ref{eq:rossler} in Julia:
-
-\medskip
-
-\noindent
 \begin{minipage}{\linewidth}
 \centering
-% Left: out-of-place
-\begin{minipage}[t]{0.475\linewidth}
+\begin{minipage}[t]{0.475\linewidth} % Left: out-of-place
 \begin{lstlisting}[
   language=Julia,
   linewidth=\linewidth,
@@ -155,8 +152,7 @@ end
 \end{lstlisting}
 \end{minipage}
 \hfill
-% Right: in-place
-\begin{minipage}[t]{0.475\linewidth}
+\begin{minipage}[t]{0.475\linewidth} % Right: in-place
 \begin{lstlisting}[
   language=Julia,
   linewidth=\linewidth,
@@ -174,7 +170,6 @@ function rossler!(dx, vx, vp, t)
 end
 \end{lstlisting}
 \end{minipage}
-
 \vspace{0.75em}
 \begin{lstlisting}[
   language=Julia,

@@ -33,6 +33,7 @@
 \usepackage[dvipsnames,svgnames]{xcolor}
 \usepackage{todonotes}
 \usepackage[T1]{fontenc}
+\usepackage{tabularx}
 
 % ---------- Page setup (skip for a0poster) ----------
 \makeatletter
@@ -45,7 +46,11 @@
 }{}
 \makeatother
 \renewcommand{\arraystretch}{1.25}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft \arraybackslash}p{#1}}
 
+\newlength{\HeaderLogoH}
+\setlength{\HeaderLogoH}{6cm} % <-- tune logo height here
 
 % --------- Code Listings ----------
 \captionsetup[lstlisting]{font={small}, labelfont={bf}, labelsep=colon}
