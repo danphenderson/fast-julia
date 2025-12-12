@@ -4,7 +4,6 @@
 \begin{document}
 
 
-% ...existing code...
 %----------------------------------------------------------------------------------------
 % HEADER
 %----------------------------------------------------------------------------------------
@@ -73,7 +72,7 @@ temporary arrays, copies data via slicing, and depends on dynamic types or
 globals. While convenient for prototypes, this leads to heavy allocation and
 garbage collection, and scales poorly for long runs or ensembles. Achieving
 ``production'' performance therefore requires both an appropriate integrator
-and performance-conscious model code.
+and performance-conscious model system code.
 
 \medskip
 
@@ -124,27 +123,48 @@ behavior:
   \end{cases*}. &&
 \end{flalign*}
 
+\medskip
+
+% Out Of Place.
+Various was to implement \ref{eq:rossler} in Julia:
 \begin{lstlisting}[
     language=Julia, 
-    caption={Naïve ``out-of-place`` Julia implementation of the \ref{eq:rossler} system.},
-    label={lst:naive}
+    caption={``Out-of-place`` implementation allocates new array each call to heap. Here, texttt{@allocated rossler([1.0,1.0,1.0], [0.2,0.2,5.7], 0.0)},
+    shows each call allocates 240-bytes}
+    label={lst:naive-out-of-place}
   ]
-  function rossler(vx, vp, t)
+function rossler(vx, vp, t)
     dx = -vx[2] - vx[3]
     dy = vx[1] + vp[1] * vx[2]
     dz = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
     return [dx, dy, dz]
-  end
+end
+\end{lstlisting}
+% In Place
+\begin{lstlisting}[
+    language=Julia, 
+    caption={``In-place`` ODE system, utilizing cache array (``pass-by-reference``)
+    ``vx`` to store the derivatives.},
+    label={lst:in-place}
+  ]
+function rossler!(vx, vp, t)
+    vx[1] = -vx[2] - vx[3]
+    vx[2] = vx[1] + vp[1] * vx[2]
+    vx[3] = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+end
 \end{lstlisting}\todo{show lowered code}
 
-
-\begin{itemize}
-  \item Code~\ref{lst:naive} defines the Rössler system in a vectorized, out-of-place style,
-  it is clear and concise, but it allocates a new vector to the heap at each step,
-  which triggers garbage collection and slows down the solver.
-  \item Code
-\end{itemize}
-
+\begin{lstlisting}[
+    language=Julia, 
+    caption={Optimal `in-place`` using static arrays allocated at compile time.},
+    label={lst:static}
+  ]
+  function rossler!(vx, vp, t)
+    vx[1] = -vx[2] - vx[3]
+    vx[2] = vx[1] + vp[1] * vx[2]
+    vx[3] = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+  end
+\end{lstlisting}\todo{show lowered code}
 
 \noindent
 Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet
