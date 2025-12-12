@@ -6,14 +6,17 @@ using Plots
 using Statistics
 
 # ----------------------------
-# Rossler RHS implementations
+# Rossler RHS implementations (canonical)
+# x' = -y - z
+# y' =  x + a y
+# z' =  b + z(x - c)
 # ----------------------------
 
 # Naive out-of-place: allocates a new Vector each call.
 function rossler(vx, vp, t)
     dx1 = -vx[2] - vx[3]
     dx2 =  vx[1] + vp[1] * vx[2]
-    dx3 =  vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+    dx3 =  vp[2] + vx[3] * (vx[1] - vp[3])
     return [dx1, dx2, dx3]
 end
 
@@ -21,7 +24,7 @@ end
 function rossler_annotated(vx::AbstractVector{T}, vp::AbstractVector{T}, t) where {T<:Real}
     dx1 = -vx[2] - vx[3]
     dx2 =  vx[1] + vp[1] * vx[2]
-    dx3 =  vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+    dx3 =  vp[2] + vx[3] * (vx[1] - vp[3])
     return T[dx1, dx2, dx3]
 end
 
@@ -30,7 +33,7 @@ function rossler!(dx, vx, vp, t)
     x1 = vx[1]
     dx[1] = -vx[2] - vx[3]
     dx[2] =  x1 + vp[1] * vx[2]
-    dx[3] =  vp[2] + x1 * vx[2] - vp[3] * vx[3]
+    dx[3] =  vp[2] + vx[3] * (x1 - vp[3])
     return nothing
 end
 
@@ -39,7 +42,7 @@ function rossler_static(vx, vp, t)
     x1 = vx[1]
     dx1 = -vx[2] - vx[3]
     dx2 =  x1 + vp[1] * vx[2]
-    dx3 =  vp[2] + x1 * vx[2] - vp[3] * vx[3]
+    dx3 =  vp[2] + vx[3] * (x1 - vp[3])
     return @SVector [dx1, dx2, dx3]
 end
 
@@ -52,6 +55,9 @@ Base.@kwdef struct RK4BenchDriver{S}
     dt::Float64 = 1e-4
     saveat::S = 0.0:0.1:50.0
     maxiters::Int = 10^9
+    save_everystep::Bool = false
+    abs_tol::Float64 = 1e-6
+    rel_tol::Float64 = 1e-6
 end
 
 odeprob(sys; u0, p, tspan) = ODEProblem(sys, u0, tspan, p)
@@ -69,9 +75,11 @@ function benchmark_fixed_rk4(driver::RK4BenchDriver, sys; u0, p)
         adaptive=false,
         dt=$(driver.dt),
         saveat=$(driver.saveat),
-        save_everystep=false,
+        save_everystep=$(driver.save_everystep),
         dense=false,
         maxiters=$(driver.maxiters),
+        abstol=$(driver.abs_tol),
+        reltol=$(driver.rel_tol),
     )
 end
 
@@ -81,7 +89,7 @@ _trial_metrics(tr) = begin
 end
 
 function run_rk4_benchmarks(; driver=RK4BenchDriver(),
-                            p_vec=[0.1, 0.1, 14], p_svec=[@SVector [0.1, 0.1, 14]])
+                            p_vec=[0.1, 0.1, 14], p_svec=@SVector[0.1, 0.1, 14])
 
     methods = [
         ("naive (Vector OOP)",   rossler,          [1.0, 1.0, 1.0], p_vec),

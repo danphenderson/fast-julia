@@ -188,50 +188,6 @@ end
 \end{lstlisting}
 \end{minipage}
 
-% \begin{lstlisting}[
-%   language=Julia,
-%   caption={``Out-of-place`` allocates a new heap array each call. For example,
-%   \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
-%   reports 240 bytes per call (typical).},
-%   label={lst:naive-out-of-place}
-% ]
-% function rossler(vx, vp, t)
-%     dx1 = -vx[2] - vx[3]
-%     dx2 = vx[1] + vp[1] * vx[2]
-%     dx3 = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
-%     return [dx1, dx2, dx3]
-% end
-% \end{lstlisting}
-% % In Place
-% \begin{lstlisting}[
-%   language=Julia, 
-%   caption={``In-place`` ODE system, utilizing cache array (`vx` passed-by-reference)
-%   for state values. Avoids per-call allocations and typically fastest for `Vector`-based states. },
-%   label={lst:in-place}
-% ]
-% function rossler!(dx, vx, vp, t)
-%     x1 = vx[1]
-%     dx[1] = -vx[2] - vx[3]
-%     dx[2] =  x1 + vp[1] * vx[2]
-%     dx[3] = vp[2] + x1 * vx[2] - vp[3] * vx[3]
-%     return nothing
-% end
-% \end{lstlisting}
-% % Static
-% \begin{lstlisting}[
-%     language=Julia, 
-%     caption={Fixed-size, stack-allocated \texttt{StaticArrays.jl} container (often faster than heap vectors for tiny systems).},
-%     label={lst:static}
-%   ]
-% function rossler_static(vx, vp, t)
-%     x1 = vx[1]
-%     dx1 = -vx[2] - vx[3]
-%     dx2 = x1 + vp[1] * vx[2]
-%     dx3 = vp[2] + x1 * vx[2] - vp[3] * vx[3]
-%     return @SVector [dx1, dx2, dx3]
-% end
-% \end{lstlisting}
-
 \noindent
 Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet
 rutrum faucibus dolor auctor. Integer posuere erat a ante venenatis dapibus
@@ -250,14 +206,26 @@ massa. Suspendisse potenti.
 
 \medskip
 
-% --- Figure placeholder: speedup plot ---
-\begin{center}
-  \includegraphics[width=0.95\linewidth]{speedup_placeholder.pdf}
+% --- Figure placeholder: speedup plot ---'
+\noindent
+\begin{minipage}{\linewidth}
+\centering
+\begin{minipage}[t]{0.475\linewidth} % Left: out-of-place
+  \includegraphics[width=0.95\linewidth]{rk4_time_normalized.png}
   \captionof{figure}{%
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
     Placeholder benchmark plot comparing naïve and optimized 
     Julia implementations for a Rössler-type ODE system.}
-\end{center}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.475\linewidth} % Right: in-place
+  \includegraphics[width=0.95\linewidth]{rk4_time_normalized.png}
+  \captionof{figure}{%
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+    Placeholder benchmark plot comparing naïve and optimized 
+    Julia implementations for a Rössler-type ODE system.}
+\end{minipage}
+\end{minipage}
 
 % --- END MIDDLE COLUMN
 \switchcolumn
