@@ -85,40 +85,45 @@ system
   \end{cases*}, &&
 \end{flalign*}
 introduced as a simplification of the Lorenz attractor
-by Otto Rössler in 1976 \cite{Rössler-1976} (commonly used
-parameters $a = b = 0.1, c=15$).
+by Otto Rössler in 1976 \cite{Rössler-1976}.
 
 \medskip
 
 \noindent
-Many users—especially those coming from MATLAB, SciPy, or R—write ODE
-right-hand sides in an out-of-place, or vectorized style, that allocates
-temporary arrays, copies data via slicing, and depends on dynamic types or
-globals. While convenient for prototypes, this leads to heavy allocation and
-garbage collection, and scales poorly for long runs or ensembles. Achieving
-``production'' performance therefore requires both an appropriate integrator
-and performance-conscious model system code.
+We seek numerical solution $\vx(t) ~ \forall t \in [t_0, t_f]$ subject to $\vx(t_0) = \vx_0$,
+with parameters $\vp$ fixed via \texttt{DifferentialEquations.jl} (by SciML organization)--
+performant ODE solving \cite{DifferentialEquations.jl-2017},
+built on the Julia language design \cite{Julia-2017}. We build on the SciML 
+tutorial~\cite{SciMLTutorial} for the Rössler system, but with a focus on code
+optimization and performance tuning.
 
 \medskip
 
 \noindent
-\texttt{DifferentialEquations.jl} (by SciML organization) is widely used for 
-performant ODE solving in Julia \cite{DifferentialEquations.jl-2017},
-built on the Julia language design \cite{Julia-2017}. We distill the SciML 
-optimization tutorial by:
+\textbf{Case Study 1: Rossler System.}
 \begin{itemize}
-  \item benchmarking naïve vs.\ optimized Julia code on a small nonstiff R\"ossler system;
-  \item removing allocations and ensuring type stability via in-place updates,
-        \texttt{StaticArrays.jl}, fused broadcasts, BLAS operations, and matrix-free stencils; and
-  \item showing how solver choice (explicit Runge--Kutta vs.\ implicit BDF) further
+  \item naive ``out-of-place'' Julia code;
+  \item optimization with in-place updates and stack-allocated arrays;
+\end{itemize}
+\textbf{Case Study 2: Parameter Sweep of Rossler System}
+\begin{itemize}
+  \item parameter sweep over $\vp$ using fused broadcasts, BLAS operations, and
+        matrix-free stencils; and
+  \item demonstrating how solver choice (explicit Runge--Kutta vs.\ implicit BDFk) further
         amplifies these gains, especially for stiff problems.
 \end{itemize}
-Together, these examples chart a practical path from prototype to production-ready
 
 \medskip
 
-\hrulefill
+\noindent
+``Production'' performance is acheived by optimization of the umderlying model
+code -- our focus herein, rather than on the integrator itself.
 
+\medskip
+
+
+\medskip
+\hrulefill
 \medskip
 
 % --- Figure placeholder: overview / pipeline ---
