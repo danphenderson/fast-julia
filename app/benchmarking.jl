@@ -109,12 +109,11 @@ _trial_metrics(tr) = begin
     (time_ns = est.time, allocs = est.allocs, memory = est.memory)
 end
 
-function _print_raw_metrics(labels::AbstractVector{<:AbstractString},
-                           metrics::AbstractDict{<:AbstractString,<:NamedTuple})
+function _print_raw_metrics(entries)
     println("\nRaw (median) metrics:")
-    for k in labels
-        m = metrics[k]
-        println(rpad(k, 24),
+    for entry in entries
+        m = entry.metrics
+        println(rpad(entry.label, 24),
                 "  time = ", m.time_ns, " ns",
                 "   allocs = ", m.allocs,
                 "   bytes = ", m.memory)
@@ -159,14 +158,16 @@ function run_benchmarks(plan::BenchmarkPlan)
         end
     end
 
-    times  = [metrics[k].time_ns for k in labels]
-    allocs = [metrics[k].allocs  for k in labels]
+    labels = getproperty.(entries, :label)
+
+    times  = [entry.metrics.time_ns for entry in entries]
+    allocs = [entry.metrics.allocs  for entry in entries]
 
     # Normalize to best (minimum) per metric.
     time_norm  = times ./ minimum(times)
     alloc_norm = allocs ./ minimum(allocs)
 
-    _print_raw_metrics(labels, metrics)
+    _print_raw_metrics(entries)
 
     p_time = _plot_normalized_bar(
         labels, time_norm;
