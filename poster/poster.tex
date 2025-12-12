@@ -1,9 +1,9 @@
 \documentclass[a0,landscape]{a0poster}
-\usepackage{times}
 \input{preamble.tex} % after the basics
-
 \definecolor{PMS310C}{RGB}{62,192,197} % Official MTU colorway
 \begin{document}
+
+
 % ...existing code...
 %----------------------------------------------------------------------------------------
 % HEADER
@@ -19,17 +19,16 @@
   {\Large\textbf{Abstract}}\par\smallskip
   {\large
   We compare naïve and optimized Julia implementations for solving
-  small to moderate systems of ordinary differential equations
-  $\vx'(t) = \vf(\vx, t) \, : \, \dim(\vx) \leq 10^2$
-  using \texttt{DifferentialEquations.jl}. We demonstrate how a sequence
-  of targeted changes---in-place updates, type stability, and solver selection---can yield order-of-magnitude
-  speedups while preserving code clarity and reproducibility (for both sparse and dense systems).
+  small to moderate systems of ODEs
+  $\vx'(t) = \vf(\vx, t) \, : \, \dim(\vx) \leq 10^2$.
+  We demonstrate how a sequence of targeted changes---in-place updates, type stability, and solver selection---can yield order-of-magnitude
+  speedups while preserving code clarity and reproducibility. By applying these techniques, we achieve a 10x speedup over the original code and demonstrate how to scale up to larger systems.
   }
 \end{minipage}
 \hfill
 \begin{minipage}[t]{0.18\linewidth}
-  \raggedright
-  \red{\Large \textbf{Contact Information:}\\[0.25cm]
+  \raggedleft
+  \red{\textbf{Contact Information:}\\[0.25cm]
   Daniel Henderson\\
   Michigan Technological University\\
   Department of Mathematical Sciences\\
@@ -39,11 +38,10 @@
 \hfill
 \begin{minipage}[t]{0.08\linewidth}
   \raggedleft
-  \vspace{0.4cm}
   \includegraphics[width=\linewidth]{logo.png}
 \end{minipage}
 
-\vspace{1cm}
+\medskip
 \hrulefill
 
 %----------------------------------------------------------------------------------------

@@ -25,7 +25,10 @@
 \usepackage{mdframed}       % boxed theorems
 \usepackage{thmtools}       % couples well with mdframed
 \usepackage{capt-of}        % if you prefer \captionof
-
+\usepackage{times}
+\usepackage[margin=1.5cm]{geometry} % try 1.5cm or 1.0cm
+\usepackage{enumitem} 
+\setlist[itemize]{nosep,leftmargin=*} % removes extra vertical space in itemize
 
 % ---------- Page setup (skip for a0poster) ----------
 \makeatletter
@@ -38,6 +41,7 @@
 }{}
 \makeatother
 \renewcommand{\arraystretch}{1.25}
+
 
 % --------- Code Listings ----------
 \captionsetup[lstlisting]{font={small}, labelfont={bf}, labelsep=colon}
