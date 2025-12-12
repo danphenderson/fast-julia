@@ -70,18 +70,18 @@ even modest inefficiencies can waste substantial time and memory.
 We demonstrate how to optimize a simple ODE solver pipeline from prototype to
 production using Julia, a high-level, high-performance language for numerical
 computation \cite{Julia-2017}. Our first case study focuses on the chaotic
-system
+system,
 \begin{flalign*}
   \tag{Rössler} \label{eq:rossler}
-  \qquad \vx'(t) = \vf(\vx, t; \vp) = 
+  \quad \vx'(t) = \vf(\vx,\, \vp) = 
   \vect{
-    -x_2 - x_3 \\
-    x_1 + a x_2 \\
-    b + x_3 (x_1 - c) \\
+    -x_2 \,-\, x_3 \\
+    x_1 \,+\, a x_2 \\
+    b \,+\, x_3 (x_1 \,-\, c) \\
   }
     ~ : ~ \begin{cases*}
-    \vx = (x_1, x_2, x_3)^\top ~(\text{state variables})\\
-    \vp = (a, b, c)^\top ~(\text{parameters}) \\
+    \vx = (x_1, \, x_2, \, x_3)^\top ~(\text{state variables})\\
+    \vp = (a, \, b, \, c)^\top ~(\text{parameters}) \\
   \end{cases*}, &&
 \end{flalign*}
 introduced as a simplification of the Lorenz attractor
@@ -115,7 +115,7 @@ We use Julia broadcasting and array programming to reduce overhead:
 \end{itemize}
 
 \noindent
-\textbf{Future of SciML is Symbolic--Numeric.} We discuss how symbolic manipulation
+\textbf{Future of SciML is Symbolic--Numeric.} Discuss how symbolic manipulation
 simplifies (\ref{eq:rossler}) via substitution, highlighting structure (two linear equations in $\vx$ and one quadratic).
 
 \medskip
