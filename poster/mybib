@@ -1,4 +1,4 @@
-@article {MR1503314,
+@article{MR1503314,
     AUTHOR = {Lengyel, B. A. and Stone, M. H.},
      TITLE = {Elementary proof of the spectral theorem},
    JOURNAL = {Ann. of Math. (2)},
@@ -14,7 +14,6 @@
        URL = {https://doi.org/10.2307/1968623},
 }
 
-% This article is the definitive citation for Julia.
 @article{Julia-2017,
     title={Julia: A fresh approach to numerical computing},
     author={Bezanson, Jeff and Edelman, Alan and Karpinski, Stefan and Shah, Viral B},
@@ -26,4 +25,33 @@
     publisher={SIAM},
     doi={10.1137/141000671},
     url={https://epubs.siam.org/doi/10.1137/141000671}
+}
+
+@article{DifferentialEquations.jl-2017,
+ author = {Rackauckas, Christopher and Nie, Qing},
+ doi = {10.5334/jors.151},
+ journal = {The Journal of Open Research Software},
+ keywords = {Applied Mathematics},
+ note = {Exported from https://app.dimensions.ai on 2019/05/05},
+ number = {1},
+ pages = {},
+ title = {DifferentialEquations.jl – A Performant and Feature-Rich Ecosystem for Solving Differential Equations in Julia},
+ url = {https://app.dimensions.ai/details/publication/pub.1085583166 and http://openresearchsoftware.metajnl.com/articles/10.5334/jors.151/galley/245/download/},
+ volume = {5},
+ year = {2017}
+}
+
+@article{BenchmarkTools.jl-2016,
+  author =	 {{Chen}, Jiahao and {Revels}, Jarrett},
+  title =	 "{Robust benchmarking in noisy environments}",
+  journal =	 {arXiv e-prints},
+  keywords =	 {Computer Science - Performance, 68N30, B.8.1, D.2.5},
+  year =	 2016,
+  month =	 "Aug",
+  eid =		 {arXiv:1608.04295},
+  archivePrefix ={arXiv},
+  eprint =	 {1608.04295},
+  primaryClass = {cs.PF},
+  adsurl =	 {https://ui.adsabs.harvard.edu/abs/2016arXiv160804295C},
+  adsnote =	 {Provided by the SAO/NASA Astrophysics Data System}
 }

@@ -1,5 +1,4 @@
-name = "app"
-uuid = "20595b51-8275-4fc6-af08-9ad61d7e3192"
+name = "fast-julia"
 version = "0.1.0"
 authors = ["johndoe "]
 

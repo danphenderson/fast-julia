@@ -97,14 +97,14 @@ benchmark_naive(driver::BenchmarkDriver = benchmark_driver()) =
 Notes:
 - Avoids forcing `t` to have the same type as `u`'s element type (helps AD / dual numbers).
 """
-function rossler_annotated(u::AbstractVector{T}, p::AbstractVector{T}, t) where {T<:Real}
+function rossler_annotated(vx::AbstractVector{T}, p::AbstractVector{T}, t) where {T<:Real}
     dx1 = -vx[2] - vx[3]
     dx2 = vx[1] + vp[1] * vx[2]
     dx3 = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
     return [dx1, dx2, dx3]
 end
 
-benchmark_annotated(driver::BenchmarkDriver = benchmark_driver()) =
+benchmark_annotated(driver::BenchmarkDriver = benchmark_driver()) =å
     benchmark_ode(driver, rossler_annotated, [1.0, 1.0, 1.0])
 
 """
@@ -113,11 +113,11 @@ Rossler returning a tuple `(dx, dy, dz)`.
 Warning: tuples are not generally the preferred state container type for SciML problems;
 use `SVector` for an immutable small state instead.
 """
-function rossler_tuple(u, p, t)
-    dx = -u[2] - u[3]
-    dy = u[1] + p[1] * u[2]
-    dz = p[2] + u[1] * u[2] - p[3] * u[3]
-    return (dx, dy, dz)
+function rossler_tuple(vx, vp, t)
+    dx1 = -vx[2] - vx[3]
+    dx2 = vx[1] + vp[1] * vx[2]
+    dx3 = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+    return (dx1, dx2, dx3)
 end
 
 benchmark_tuple(driver::BenchmarkDriver = benchmark_driver()) =
@@ -130,11 +130,11 @@ Performance improvements:
 - Avoids per-call allocations.
 - Typically fastest for `Vector`-based states.
 """
-function rossler!(du, u, p, t)
-    u1 = u[1]
-    du[1] = -u[2] - u[3]
-    du[2] =  u1 + p[1] * u[2]
-    du[3] = p[2] + u1 * u[2] - p[3] * u[3]
+function rossler!(dx, vx, vp, t)
+    x1 = vx[1]
+    dx[1] = -vx[2] - vx[3]
+    dx[2] =  x1 + vp[1] * vx[2]
+    dx[3] = vp[2] + x1 * vx[2] - vp[3] * vx[3]
     return nothing
 end
 
@@ -147,12 +147,12 @@ Static out-of-place system returning an `SVector`.
 Performance improvements:
 - Fixed-size, stack-allocated small container (often faster than heap vectors for tiny systems).
 """
-function rossler_static(u, p, t)
-    u1 = u[1]
-    dx = -u[2] - u[3]
-    dy = u1 + p[1] * u[2]
-    dz = p[2] + u1 * u[2] - p[3] * u[3]
-    return @SVector [dx, dy, dz]
+function rossler_static(vx, vp, t)
+    x1 = vx[1]
+    dx1 = -vx[2] - vx[3]
+    dx2 = x1 + vp[1] * vx[2]
+    dx3 = vp[2] + x1 * vx[2] - vp[3] * vx[3]
+    return @SVector [dx1, dx2, dx3]
 end
 
 benchmark_static(driver::BenchmarkDriver = benchmark_driver()) =

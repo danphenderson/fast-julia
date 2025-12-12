@@ -47,7 +47,9 @@
 %----------------------------------------------------------------------------------------
 % BODY (3 COLUMNS)
 %----------------------------------------------------------------------------------------
-\begin{multicols}{3}
+\begin{paracol}{3}
+  \setcolumnwidth{0.28\textwidth,0.44\textwidth,0.28\textwidth}
+
 
 %------------------------ INTRODUCTION ------------------------
 \section*{Introduction}
@@ -62,7 +64,7 @@ even modest inefficiencies can waste substantial time and memory.
 
 \noindent
 Many users—especially those coming from MATLAB, SciPy, or R—write ODE
-right-hand sides in an out-of-place, vectorized style that allocates
+right-hand sides in an out-of-place, or vectorized style, that allocates
 temporary arrays, copies data via slicing, and depends on dynamic types or
 globals. While convenient for prototypes, this leads to heavy allocation and
 garbage collection, and scales poorly for long runs or ensembles. Achieving
@@ -101,7 +103,8 @@ Together, these examples chart a practical path from prototype to production-rea
 \end{center}
 
 % --- END FIRST COLUMN
-\columnbreak
+\switchcolumn
+
 
 % ------------------------ Ideally: Start of Middle Column ------------------------
 \noindent
@@ -123,15 +126,25 @@ behavior:
 
 \medskip
 
-
 \noindent
 Various was to implement \ref{eq:rossler} in Julia:
+
+\medskip
+
+\noindent
+\begin{minipage}{\linewidth}
+\centering
+% Left: out-of-place
+\begin{minipage}[t]{0.475\linewidth}
 \begin{lstlisting}[
-    language=Julia, 
-    caption={``Out-of-place`` implementation allocates new array each call to heap. Here, texttt{@allocated rossler([1.0,1.0,1.0], [0.2,0.2,5.7], 0.0)},
-    shows each call allocates 240-bytes}
-    label={lst:naive-out-of-place}
-  ]
+  language=Julia,
+  linewidth=\linewidth,
+  breaklines=true,
+  caption={``Out-of-place`` allocates a new heap array each call. For example,
+  \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
+  reports 240 bytes per call (typical).},
+  label={lst:naive-out-of-place}
+]
 function rossler(vx, vp, t)
     dx1 = -vx[2] - vx[3]
     dx2 = vx[1] + vp[1] * vx[2]
@@ -139,36 +152,97 @@ function rossler(vx, vp, t)
     return [dx1, dx2, dx3]
 end
 \end{lstlisting}
-% In Place
+\end{minipage}
+\hfill
+% Right: in-place
+\begin{minipage}[t]{0.475\linewidth}
 \begin{lstlisting}[
-    language=Julia, 
-    caption={``In-place`` ODE system, utilizing cache array (``pass-by-reference``)
-    ``vx`` to store the derivatives.},
-    label={lst:in-place}
-  ]
-function rossler!(vx, vp, t)
-    vx[1] = -vx[2] - vx[3]
-    vx[2] = vx[1] + vp[1] * vx[2]
-    vx[3] = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+  language=Julia,
+  linewidth=\linewidth,
+  breaklines=true,
+  caption={``In-place`` ODE system, utilizing cache array (`vx` passed-by-reference)
+  for state values. Avoids per-call allocations and typically fastest for `Vector`-based states.},
+  label={lst:in-place}
+]
+function rossler!(dx, vx, vp, t)
+    x1 = vx[1]
+    dx[1] = -vx[2] - vx[3]
+    dx[2] =  x1 + vp[1] * vx[2]
+    dx[3] = vp[2] + x1 * vx[2] - vp[3] * vx[3]
+    return nothing
 end
-\end{lstlisting}\todo{show lowered code}
+\end{lstlisting}
+\end{minipage}
 
+\vspace{0.75em}
 \begin{lstlisting}[
-    language=Julia, 
-    caption={Optimal `in-place`` using static arrays allocated at compile time.},
-    label={lst:static}
-  ]
-  function rossler!(vx, vp, t)
-    vx[1] = -vx[2] - vx[3]
-    vx[2] = vx[1] + vp[1] * vx[2]
-    vx[3] = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
-  end
-\end{lstlisting}\todo{show lowered code}
+  language=Julia,
+  linewidth=\linewidth,
+  breaklines=true,
+  caption={Fixed-size, stack-allocated \texttt{StaticArrays.jl} container (often faster than heap vectors for tiny systems).},
+  label={lst:static}
+]
+function rossler_static(vx, vp, t)
+    x1 = vx[1]
+    dx1 = -vx[2] - vx[3]
+    dx2 = x1 + vp[1] * vx[2]
+    dx3 = vp[2] + x1 * vx[2] - vp[3] * vx[3]
+    return @SVector [dx1, dx2, dx3]
+end
+\end{lstlisting}
+\end{minipage}
+
+% \begin{lstlisting}[
+%   language=Julia,
+%   caption={``Out-of-place`` allocates a new heap array each call. For example,
+%   \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
+%   reports 240 bytes per call (typical).},
+%   label={lst:naive-out-of-place}
+% ]
+% function rossler(vx, vp, t)
+%     dx1 = -vx[2] - vx[3]
+%     dx2 = vx[1] + vp[1] * vx[2]
+%     dx3 = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+%     return [dx1, dx2, dx3]
+% end
+% \end{lstlisting}
+% % In Place
+% \begin{lstlisting}[
+%   language=Julia, 
+%   caption={``In-place`` ODE system, utilizing cache array (`vx` passed-by-reference)
+%   for state values. Avoids per-call allocations and typically fastest for `Vector`-based states. },
+%   label={lst:in-place}
+% ]
+% function rossler!(dx, vx, vp, t)
+%     x1 = vx[1]
+%     dx[1] = -vx[2] - vx[3]
+%     dx[2] =  x1 + vp[1] * vx[2]
+%     dx[3] = vp[2] + x1 * vx[2] - vp[3] * vx[3]
+%     return nothing
+% end
+% \end{lstlisting}
+% % Static
+% \begin{lstlisting}[
+%     language=Julia, 
+%     caption={Fixed-size, stack-allocated \texttt{StaticArrays.jl} container (often faster than heap vectors for tiny systems).},
+%     label={lst:static}
+%   ]
+% function rossler_static(vx, vp, t)
+%     x1 = vx[1]
+%     dx1 = -vx[2] - vx[3]
+%     dx2 = x1 + vp[1] * vx[2]
+%     dx3 = vp[2] + x1 * vx[2] - vp[3] * vx[3]
+%     return @SVector [dx1, dx2, dx3]
+% end
+% \end{lstlisting}
 
 \noindent
 Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet
 rutrum faucibus dolor auctor. Integer posuere erat a ante venenatis dapibus
 posuere velit aliquet.
+
+% --- END MIDDLE COLUMN
+\switchcolumn
 
 %------------------------ RESULTS / ANALYSIS ------------------------
 \section*{Results/Analysis}
@@ -259,5 +333,5 @@ purus sit amet fermentum.
 \bibliographystyle{plain}
 \bibliography{mybib}
 
-\end{multicols}
+\end{paracol}
 \end{document}
