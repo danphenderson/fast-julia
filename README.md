@@ -16,17 +16,17 @@ mindmap
         invariants/constraints (mass, positivity)
         events/discontinuities`"]
     Well-posedness checks
-          \newlines["`Existence & uniqueness (Picard–Lindelöf)
-            f locally Lipschitz in x
-          `"]
-          \newlines["`Domain validity
-            singularities / blow-up
-            parameter ranges
-          `"]
-          \newlines["`Scaling / nondimensionalization
-            reduce condition issues
-            balance magnitudes
-          `"]
+      \newlines["`Existence & uniqueness (Picard–Lindelöf)
+        f locally Lipschitz in x
+      `"]
+      \newlines["`Domain validity
+        singularities / blow-up
+        parameter ranges
+      `"]
+      \newlines["`Scaling / nondimensionalization
+        reduce condition issues
+        balance magnitudes
+      `"]
     Numerical method selection
       \newlines["`Stiffness?
         nonstiff: explicit RK (e.g., RK4 / Tsit5)
@@ -41,19 +41,8 @@ mindmap
         Hamiltonian / symplectic: symplectic integrator
         oscillatory: methods tuned for oscillations
         large sparse: Jacobian sparsity + Krylov
-      `"]        
-```
-
-
-
-
-
-
-
-
-
-
-    \newlines["`Discretization details
+      `"]
+          \newlines["`Discretization details
       Step size / tolerance
         dt (fixed) OR reltol/abstol (adaptive)
         maxiters, dtmin/dtmax
@@ -96,7 +85,19 @@ mindmap
       Reproducibility
         fixed seeds (if noise)
         record solver/tols/version
-    `"]   
+    `"]     
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
