@@ -87,12 +87,11 @@ _trial_metrics(tr) = begin
     (time_ns = est.time, allocs = est.allocs, memory = est.memory)
 end
 
-function _print_raw_metrics(labels::AbstractVector{<:AbstractString},
-                           metrics::AbstractDict{<:AbstractString,<:NamedTuple})
+function _print_raw_metrics(entries)
     println("\nRaw (median) metrics:")
-    for k in labels
-        m = metrics[k]
-        println(rpad(k, 24),
+    for entry in entries
+        m = entry.metrics
+        println(rpad(entry.label, 24),
                 "  time = ", m.time_ns, " ns",
                 "   allocs = ", m.allocs,
                 "   bytes = ", m.memory)
@@ -122,33 +121,34 @@ function _plot_normalized_bar(labels, norm_values;
 end
 
 function run_rk4_benchmarks(; driver=RK4BenchDriver(),
-                            p_vec=[0.1, 0.1, 14], p_svec=@SVector[0.1, 0.1, 14])
+                           p_vec=[0.1, 0.1, 14], p_svec=@SVector[0.1, 0.1, 14])
 
     methods = [
-        ("naive (Vector OOP)",   rossler,          [1.0, 1.0, 1.0], p_vec),
-        ("in-place (!)",         rossler!,         [1.0, 1.0, 1.0], p_vec),
-        ("static (SVector OOP)", rossler_static,   (@SVector [1.0, 1.0, 1.0]), p_svec),
+        (label="naive (Vector OOP)",   func=rossler,        u0=[1.0, 1.0, 1.0],               p=p_vec),
+        (label="in-place (!)",         func=rossler!,       u0=[1.0, 1.0, 1.0],               p=p_vec),
+        (label="static (SVector OOP)", func=rossler_static, u0=(@SVector [1.0, 1.0, 1.0]), p=p_svec),
     ]
 
-    trials = Dict{String,Any}()
-    metrics = Dict{String,NamedTuple}()
+    entries = NamedTuple{(:label, :trial, :metrics)}[]
 
-    for (name, f, u0, p) in methods
-        tr = Base.invokelatest(benchmark_fixed_rk4, driver, f; u0=u0, p=p)
-        trials[name] = tr
-        metrics[name] = _trial_metrics(tr)
+    for spec in methods
+        tr = Base.invokelatest(benchmark_fixed_rk4, driver, spec.func; u0=spec.u0, p=spec.p)
+        push!(entries, (label=spec.label, trial=tr, metrics=_trial_metrics(tr)))
     end
 
-    labels = collect(keys(metrics))
+    trials = Dict(entry.label => entry.trial for entry in entries)
+    metrics = Dict(entry.label => entry.metrics for entry in entries)
 
-    times  = [metrics[k].time_ns for k in labels]
-    allocs = [metrics[k].allocs  for k in labels]
+    labels = getproperty.(entries, :label)
+
+    times  = [entry.metrics.time_ns for entry in entries]
+    allocs = [entry.metrics.allocs  for entry in entries]
 
     # Normalize to best (minimum) per metric.
     time_norm  = times ./ minimum(times)
     alloc_norm = allocs ./ minimum(allocs)
 
-    _print_raw_metrics(labels, metrics)
+    _print_raw_metrics(entries)
 
     p_time = _plot_normalized_bar(
         labels, time_norm;
@@ -166,8 +166,8 @@ function run_rk4_benchmarks(; driver=RK4BenchDriver(),
 
     println("\nSaved figures: rk4_time_normalized_log10.png, rk4_allocs_normalized_log10.png")
 
-    return (trials=trials, metrics=metrics, time_norm=time_norm, alloc_norm=alloc_norm,
-            p_time=p_time, p_alloc=p_alloc)
+    return (entries=entries, trials=trials, metrics=metrics, time_norm=time_norm,
+            alloc_norm=alloc_norm, p_time=p_time, p_alloc=p_alloc)
 end
 
 # If you want this to run when executed as a script:
