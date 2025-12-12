@@ -88,6 +88,39 @@ _trial_metrics(tr) = begin
     (time_ns = est.time, allocs = est.allocs, memory = est.memory)
 end
 
+function _print_raw_metrics(labels::AbstractVector{<:AbstractString},
+                           metrics::AbstractDict{<:AbstractString,<:NamedTuple})
+    println("\nRaw (median) metrics:")
+    for k in labels
+        m = metrics[k]
+        println(rpad(k, 24),
+                "  time = ", m.time_ns, " ns",
+                "   allocs = ", m.allocs,
+                "   bytes = ", m.memory)
+    end
+    return nothing
+end
+
+function _plot_normalized_bar(labels, norm_values;
+                             title::AbstractString,
+                             ylabel::AbstractString,
+                             filename::AbstractString,
+                             xrotation::Real=25,
+                             yscale=:log10)
+    # Avoid log(0) if something hits 0 (e.g., allocs).
+    vals = max.(norm_values, 1e-12)
+
+    p = bar(labels, vals;
+        title=title,
+        ylabel=ylabel,
+        xrotation=xrotation,
+        linewidth=0,
+        yscale=yscale,
+        ylims=(1.0, maximum(vals) * 1.1),
+    )
+    savefig(p, filename)
+    return p
+end
 function run_rk4_benchmarks(; driver=RK4BenchDriver(),
                             p_vec=[0.1, 0.1, 14], p_svec=@SVector[0.1, 0.1, 14])
 
@@ -107,69 +140,34 @@ function run_rk4_benchmarks(; driver=RK4BenchDriver(),
     end
 
     labels = collect(keys(metrics))
+
     times  = [metrics[k].time_ns for k in labels]
     allocs = [metrics[k].allocs  for k in labels]
 
     # Normalize to best (minimum) per metric.
-    t0 = minimum(times)
-    a0 = minimum(allocs)
-    time_norm  = times ./ t0
-    alloc_norm = allocs ./ a0
+    time_norm  = times ./ minimum(times)
+    alloc_norm = allocs ./ minimum(allocs)
 
-    # ----------------------------
-    # Plots (bar charts)
-    # ----------------------------
-    default(size=(1000, 450), legend=false)
+    _print_raw_metrics(labels, metrics)
 
-    p_time = bar(labels, time_norm;
-        title="RK4 fixed-step: Normalized wall-clock time (median)",
+    p_time = _plot_normalized_bar(
+        labels, time_norm;
+        title="RK4 fixed-step: Normalized wall-clock time (median, log10)",
         ylabel="Time (× best)",
-        xrotation=25,
-        linewidth=0,
+        filename="rk4_time_normalized_log10.png",
     )
-    savefig(p_time, "rk4_time_normalized.png")
 
-    p_alloc = bar(labels, alloc_norm;
-        title="RK4 fixed-step: Normalized allocations (median)",
+    p_alloc = _plot_normalized_bar(
+        labels, alloc_norm;
+        title="RK4 fixed-step: Normalized allocations (median, log10)",
         ylabel="Allocations (× best)",
-        xrotation=25,
-        linewidth=0,
+        filename="rk4_allocs_normalized_log10.png",
     )
-    savefig(p_alloc, "rk4_allocs_normalized.png")
 
-    println("\nRaw (median) metrics:")
-    for k in labels
-        m = metrics[k]
-        println(rpad(k, 24), "  time = ", m.time_ns, " ns   allocs = ", m.allocs, "   bytes = ", m.memory)
-    end
-    println("\nSaved figures: rk4_time_normalized.png, rk4_allocs_normalized.png")
+    println("\nSaved figures: rk4_time_normalized_log10.png, rk4_allocs_normalized_log10.png")
 
-    # Optional: avoid log(0) if a method hits 0 allocs (rare but possible)
-    time_norm_safe  = max.(time_norm, 1e-12)
-    alloc_norm_safe = max.(alloc_norm, 1e-12)
-
-    p_time = bar(labels, time_norm_safe;
-        title  = "RK4 fixed-step: Normalized wall-clock time (median, log10)",
-        ylabel = "Time (× best)",
-        xrotation = 25,
-        linewidth = 0,
-        yscale = :log10,
-        ylims = (1.0, maximum(time_norm_safe) * 1.1),
-    )
-    savefig(p_time, "rk4_time_normalized_log10.png")
-
-    p_alloc = bar(labels, alloc_norm_safe;
-        title  = "RK4 fixed-step: Normalized allocations (median, log10)",
-        ylabel = "Allocations (× best)",
-        xrotation = 25,
-        linewidth = 0,
-        yscale = :log10,
-        ylims = (1.0, maximum(alloc_norm_safe) * 1.1),
-    )
-    savefig(p_alloc, "rk4_allocs_normalized_log10.png")
-
-
-    return (trials=trials, metrics=metrics, time_norm=time_norm, alloc_norm=alloc_norm)
+    return (trials=trials, metrics=metrics, time_norm=time_norm, alloc_norm=alloc_norm,
+            p_time=p_time, p_alloc=p_alloc)
 end
 
 # If you want this to run when executed as a script:
