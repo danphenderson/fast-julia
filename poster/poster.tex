@@ -73,7 +73,7 @@ computation \cite{Julia-2017}. Our first case study focuses on the chaotic
 system,
 \begin{flalign*}
   \tag{Rössler} \label{eq:rossler}
-  \quad \vx'(t) = \vf(\vx,\, \vp) = 
+  \quad \vx'(t) = \vf(\vx,\, \vp, \, t) = 
   \vect{
     -x_2 \,-\, x_3 \\
     x_1 \,+\, a x_2 \\
@@ -125,7 +125,7 @@ simplifies (\ref{eq:rossler}) via substitution, highlighting structure (two line
 % --- Figure placeholder: overview / pipeline ---
 \medskip
 \begin{center}
-  \includegraphics[width=0.9\linewidth]{pipeline_placeholder.pdf}
+  \includegraphics[width=0.4\linewidth]{tb-pipeline.png}
   \captionof{figure}{%
     Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
     Placeholder overview diagram of the proof-of-concept to 
@@ -137,6 +137,8 @@ simplifies (\ref{eq:rossler}) via substitution, highlighting structure (two line
 
 
 % ------------------------ Ideally: Start of Middle Column ------------------------
+\section*{Case Study 1: Optimizing the Rössler ODE System}
+
 \noindent
 \begin{minipage}{\linewidth}
 \centering
@@ -196,22 +198,7 @@ end
 \end{minipage}
 
 \noindent
-Maecenas faucibus mollis interdum. Vivamus sagittis lacus vel augue laoreet
-rutrum faucibus dolor auctor. Integer posuere erat a ante venenatis dapibus
-posuere velit aliquet.
-
-
-%------------------------ RESULTS / ANALYSIS ------------------------
-\section*{Results/Analysis}
-
-\noindent
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris fermentum
-facilisis ligula, id hendrerit lectus gravida sed. Vestibulum ante ipsum primis
-in faucibus orci luctus et ultrices posuere cubilia curae; Sed aliquet, erat
-vel volutpat tempor, urna lorem vehicula elit, ut facilisis neque enim sed
-massa. Suspendisse potenti.
-
-\medskip
+\subsection*{Results/Analysis}
 
 % --- Figure placeholder: speedup plot ---'
 \noindent
@@ -233,20 +220,6 @@ massa. Suspendisse potenti.
     Julia implementations for a Rössler-type ODE system.}
 \end{minipage}
 \end{minipage}
-
-% --- END MIDDLE COLUMN
-\switchcolumn
-
-\medskip
-
-\noindent
-Curabitur sit amet convallis urna. Aenean ultricies, mauris at dignissim
-egestas, metus orci rhoncus urna, vitae tempor elit arcu ut orci. Integer
-ullamcorper, ligula in lacinia pretium, lacus lorem sollicitudin nisi, non
-elementum velit lectus at ipsum.
-
-\medskip
-
 % --- Table placeholder: benchmark numbers ---
 \begin{center}
   \begin{tabular}{lccc}
@@ -265,41 +238,55 @@ elementum velit lectus at ipsum.
 \end{center}
 
 \medskip
+\hrulefill
+\medskip
+
+\noindent
+\section*{Case Study 2: Parameter Sweep and Solver Selection}
+\td{TODO: Structurally, Case 2 and Case 1 are logically seperate but mirror one another, here
+we just consider a larger system and a parameter sweep, but the same principles apply.}
+
+% --- END MIDDLE COLUMN
+\switchcolumn
+
+%------------------------ Conclusion ------------------------
+\section*{Conclusion: Key Takeaways for Production-Quality Code}
+
+\noindent
+Symbolic computation can automate derivations and optimizations that 
+we’d otherwise do by hand, improving both performance and reliability.
+For example, the Rössler system (\ref{eq:rossler}) is linear in two of its
+unknowns, and can be simplified by substitution. \texttt{ModelingToolkit.jl} can
+automate this process, and even generate optimized code for the resulting system.
+
+\medskip
 
 \noindent
 Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac
 turpis egestas. Sed posuere consectetur est at lobortis. Vestibulum id ligula
 porta felis euismod semper.
 
-%------------------------ DISCUSSION / OPEN PROBLEMS ------------------------
-\section*{Discussion / Open Problems}
+%------------------------ Conclusion ------------------------
+\section*{Conclusion: Key Takeaways for Production-Quality Code}
 
 \noindent
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer in lacus nec
-odio commodo condimentum. Pellentesque vitae elit at lacus vulputate posuere.
-Morbi laoreet, justo at varius hendrerit, justo nisi consequat nisl, non
-tincidunt neque augue quis leo. Sed viverra urna id dui pulvinar, non gravida
-nisl viverra.
+By carefully crafting our Julia implementation of the Rössler system – using in-place updates,
+static arrays, and solver-aware techniques – we achieved C-like performance without sacrificing 
+code clarity. Performance through Non-Allocation and developer productivity go hand-in-hand in Julia!
+By following these practices, your simulation code can scale up to large problems, be reused in 
+future research, and even shared confidently with the community as reliable software.
 
 \medskip
-
-% --- Figure placeholder: future work / design sketch ---
-\begin{center}
-  \includegraphics[width=0.85\linewidth]{futurework_placeholder.pdf}
-  \captionof{figure}{%
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-    Placeholder conceptual diagram for future extensions 
-    (e.g., GPU acceleration, parameter sweeps, or PDE MOL extensions).}
-\end{center}
+\noindent
+One must also remeber the importance of choosing the right integrator, here an explicit
+scheme is sufficient for the non-stiff Rössler system, but implicit methods are
+necessary for stiff problems. The SciML ecosystem provides a rich set of tools for
+selecting and tuning the best solver for your problem; don't guess, measure
+with \texttt{BenchmarkTools.jl}!
 
 \medskip
 
 \noindent
-Suspendisse ut leo nec nibh ultricies finibus. Sed euismod, nisl vel tempor
-mattis, metus arcu pulvinar turpis, sed luctus odio tellus id massa. Donec in
-lectus vitae sapien iaculis volutpat quis in neque. Cras mattis consectetur
-purus sit amet fermentum.
-
 %------------------------ REFERENCES ------------------------
 \nocite{*}
 \bibliographystyle{plain}
