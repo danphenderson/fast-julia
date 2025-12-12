@@ -67,6 +67,30 @@ even modest inefficiencies can waste substantial time and memory.
 \medskip
 
 \noindent
+We demonstrate how to optimize a simple ODE solver pipeline from prototype to
+production using Julia, a high-level, high-performance language for numerical
+computation \cite{Julia-2017}. Our first case study focuses on the chaotic
+system
+\begin{flalign*}
+  \tag{Rössler} \label{eq:rossler}
+  \qquad \vx'(t) = \vf(\vx, t; \vp) = 
+  \vect{
+    -x_2 - x_3 \\
+    x_1 + a x_2 \\
+    b + x_3 (x_1 - c) \\
+  }
+    ~ : ~ \begin{cases*}
+    \vx = (x_1, x_2, x_3)^\top ~(\text{state variables})\\
+    \vp = (a, b, c)^\top ~(\text{parameters}) \\
+  \end{cases*}, &&
+\end{flalign*}
+introduced as a simplification of the Lorenz attractor
+by Otto Rössler in 1976 \cite{Rössler-1976} (commonly used
+parameters $a = b = 0.1, c=15$).
+
+\medskip
+
+\noindent
 Many users—especially those coming from MATLAB, SciPy, or R—write ODE
 right-hand sides in an out-of-place, or vectorized style, that allocates
 temporary arrays, copies data via slicing, and depends on dynamic types or
@@ -113,24 +137,6 @@ Together, these examples chart a practical path from prototype to production-rea
 
 % ------------------------ Ideally: Start of Middle Column ------------------------
 \noindent
-Various implementations of the well-known Rössler system:
-\begin{flalign*}
-  \tag{Rössler} \label{eq:rossler}%
-  \qquad \vx'(t) = \vf(\vx, t; \vp) = 
-  \vect{
-    -x_2 - x_3 \\
-    x_1 + a x_2 \\
-    b + x_1 x_2 - c x_3
-  }
-    ~ : ~ \begin{cases*}
-    \vx = (x_1, x_2, x_3)^\top ~(\text{state variables})\\
-    \vp = (a, b, c)^\top ~(\text{parameters}) \\
-  \end{cases*}. &&
-\end{flalign*}
-
-\medskip
-
-\noindent
 \begin{minipage}{\linewidth}
 \centering
 \begin{minipage}[t]{0.475\linewidth} % Left: out-of-place
@@ -138,18 +144,18 @@ Various implementations of the well-known Rössler system:
   language=Julia,
   linewidth=\linewidth,
   breaklines=true,
-  caption={``Out-of-place`` allocates a new heap array each call. For example,
-  \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
-  reports 240 bytes per call (typical).},
+  caption={``Out-of-place`` allocates a new heap array each call.},
   label={lst:naive-out-of-place}
 ]
 function rossler(vx, vp, t)
     dx1 = -vx[2] - vx[3]
-    dx2 = vx[1] + vp[1] * vx[2]
-    dx3 = vp[2] + vx[1] * vx[2] - vp[3] * vx[3]
+    dx2 =  vx[1] + vp[1] * vx[2]
+    dx3 =  vp[2] + vx[3] * (vx[1] - vp[3])
     return [dx1, dx2, dx3]
 end
 \end{lstlisting}
+\td{\small \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
+  reports 240 bytes per call (typical).}
 \end{minipage}
 \hfill
 \begin{minipage}[t]{0.475\linewidth} % Right: in-place
@@ -165,7 +171,7 @@ function rossler!(dx, vx, vp, t)
     x1 = vx[1]
     dx[1] = -vx[2] - vx[3]
     dx[2] =  x1 + vp[1] * vx[2]
-    dx[3] = vp[2] + x1 * vx[2] - vp[3] * vx[3]
+    dx[3] =  vp[2] + vx[3] * (x1 - vp[3])
     return nothing
 end
 \end{lstlisting}
@@ -175,14 +181,14 @@ end
   language=Julia,
   linewidth=\linewidth,
   breaklines=true,
-  caption={Fixed-size, stack-allocated \texttt{StaticArrays.jl} container (often faster than heap vectors for tiny systems).},
+  caption={Fixed-size, stack-allocated \texttt{\cite{StaticArrays.jl-2017}} version.},
   label={lst:static}
 ]
 function rossler_static(vx, vp, t)
     x1 = vx[1]
     dx1 = -vx[2] - vx[3]
-    dx2 = x1 + vp[1] * vx[2]
-    dx3 = vp[2] + x1 * vx[2] - vp[3] * vx[3]
+    dx2 =  x1 + vp[1] * vx[2]
+    dx3 =  vp[2] + vx[3] * (x1 - vp[3])
     return @SVector [dx1, dx2, dx3]
 end
 \end{lstlisting}
