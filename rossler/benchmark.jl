@@ -131,35 +131,64 @@ fixed set of keywords.
 """
 function solve_system_fast(sys::ODESys, sp::ODESolveParams)
     prob = make_prob(sys)
-    # Determine the effective timestep (for non-adaptive solves)
     dt = sp.dt === nothing ? sys.dt : sp.dt
+
     if sp.adaptive
-        return solve(prob, sp.alg;
-            adaptive=true,
-            reltol=sp.reltol,
-            abstol=sp.abstol,
-            saveat=sp.saveat,
-            save_start=sp.save_start,
-            save_end=sp.save_end,
-            save_everystep=sp.save_everystep,
-            save_on=sp.save_on,
-            dense=sp.dense,
-            alias_u0=sp.alias_u0,
-            timeseries_errors=sp.timeseries_errors,
-        )
+        if sp.saveat === nothing
+            return solve(prob, sp.alg;
+                adaptive=true,
+                reltol=sp.reltol,
+                abstol=sp.abstol,
+                save_start=sp.save_start,
+                save_end=sp.save_end,
+                save_everystep=sp.save_everystep,
+                save_on=sp.save_on,
+                dense=sp.dense,
+                alias_u0=sp.alias_u0,
+                timeseries_errors=sp.timeseries_errors,
+            )
+        else
+            return solve(prob, sp.alg;
+                adaptive=true,
+                reltol=sp.reltol,
+                abstol=sp.abstol,
+                saveat=sp.saveat,
+                save_start=sp.save_start,
+                save_end=sp.save_end,
+                save_everystep=sp.save_everystep,
+                save_on=sp.save_on,
+                dense=sp.dense,
+                alias_u0=sp.alias_u0,
+                timeseries_errors=sp.timeseries_errors,
+            )
+        end
     else
-        return solve(prob, sp.alg;
-            adaptive=false,
-            dt=dt,
-            saveat=sp.saveat,
-            save_start=sp.save_start,
-            save_end=sp.save_end,
-            save_everystep=sp.save_everystep,
-            save_on=sp.save_on,
-            dense=sp.dense,
-            alias_u0=sp.alias_u0,
-            timeseries_errors=sp.timeseries_errors,
-        )
+        if sp.saveat === nothing
+            return solve(prob, sp.alg;
+                adaptive=false,
+                dt=dt,
+                save_start=sp.save_start,
+                save_end=sp.save_end,
+                save_everystep=sp.save_everystep,
+                save_on=sp.save_on,
+                dense=sp.dense,
+                alias_u0=sp.alias_u0,
+                timeseries_errors=sp.timeseries_errors,
+            )
+        else
+            return solve(prob, sp.alg;
+                adaptive=false,
+                dt=dt,
+                saveat=sp.saveat,
+                save_start=sp.save_start,
+                save_end=sp.save_end,
+                save_everystep=sp.save_everystep,
+                save_on=sp.save_on,
+                dense=sp.dense,
+                alias_u0=sp.alias_u0,
+                timeseries_errors=sp.timeseries_errors,
+            )
+        end
     end
 end
 
