@@ -18,8 +18,8 @@
 
 \noindent
 \begin{minipage}[t]{0.34\textwidth}
-  {\Huge\bfseries\color{PMS310C} POC to Production}\\[1ex]
-  {\Large\itshape Fast Julia Differential Equation Solving}\\[2ex]
+  {\Huge\bfseries\color{PMS310C} Fast Julia}\\[1ex]
+  {\Large\itshape Optimizing Dense Systems of ODEs}\\[2ex]
   {\large Daniel Henderson}\\
   {\normalsize Michigan Technological University}\\
   {\small\ttfamily dphender@mtu.edu}
@@ -90,12 +90,16 @@ ecosystem \cite{DifferentialEquations.jl-2017}, building on the SciML techniques
 
 \noindent
 \textbf{Case Study.}  We compare out-of-place and in-place Julia implementations
-of the Rössler system \eqref{eq:rossler}, together with a type-stable fixed-size variant:
+of the Rössler system \eqref{eq:rossler}, together with a type-stable fixed/static-size variant:
 \begin{itemize}
   \item naïve out-of-place code allocates a new array at each right-hand-side call, triggering garbage collection;
   \item optimized in-place code eliminates per-call allocations for \texttt{Vector}-based states; and
   \item a \texttt{StaticArrays.jl}/\texttt{SVector} implementation enables stack allocation, often fastest for very small systems.
 \end{itemize}
+We optimize each implementation using macros \texttt{\@inbounds}, \texttt{\@inline}, and we see
+the lowered code to understand the impact of these changes.
+
+\medskip
 
 \medskip
 \hrulefill
@@ -351,7 +355,7 @@ end
 
 % ---- TODO WHAT GOES HERE? --- Conclusion comes last
 %------------------------ Conclusion ------------------------
-\section*{Conclusion: Future Work for SciML}
+\section*{Conclusion: Optimizing ODEs in Julia}
 
 \noindent
 Symbolic computation can automate derivations and optimizations that would otherwise
