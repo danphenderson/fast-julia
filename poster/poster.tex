@@ -114,57 +114,40 @@ the lowered code to understand the impact of these changes.
 \begin{minipage}{\linewidth}
 \centering
 \begin{minipage}[t]{0.475\linewidth} % Left: out-of-place
-\begin{lstlisting}[
+\lstinputlisting[
   language=Julia,
   linewidth=\linewidth,
   breaklines=true,
+  firstline=38,
+  lastline=46,
   caption={Out-of-place RHS using the SciML interface `f(u,p,t)` (returns a fresh array).},
   label={lst:naive-out-of-place}
-]
-function rossler(u, p, t)
-    du1 = -u[2] - u[3]
-    du2 =  u[1] + p[1] * u[2]
-    du3 =  p[2] + u[3] * (u[1] - p[3])
-    return [du1, du2, du3]
-end
-\end{lstlisting}
+]{../rossler/impl.jl}
 \td{\small \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
   reports 240 bytes per call (typical).}
 \end{minipage}
 \hfill
 \begin{minipage}[t]{0.475\linewidth} % Right: in-place
-\begin{lstlisting}[
+\lstinputlisting[
   language=Julia,
   linewidth=\linewidth,
   breaklines=true,
+  firstline=66,
+  lastline=75,
   caption={In-place RHS using the SciML signature `f!(du,u,p,t)`.  Avoids per-call allocations and is typically fastest for `Vector`-based states.},
   label={lst:in-place}
-]
-function rossler!(du, u, p, t)
-    x1 = u[1]
-    du[1] = -u[2] - u[3]
-    du[2] =  x1 + p[1] * u[2]
-    du[3] =  p[2] + u[3] * (x1 - p[3])
-    return nothing
-end
-\end{lstlisting}
+]{../rossler/impl.jl}
 \end{minipage}
 \vspace{0.75em}
-\begin{lstlisting}[
+\lstinputlisting[
   language=Julia,
   linewidth=\linewidth,
   breaklines=true,
+  firstline=97,
+  lastline=107,
   caption={Fixed-size, stack-allocated version using \texttt{StaticArrays}.},
   label={lst:static}
-]
-function rossler_static(u, p, t)
-    x1 = u[1]
-    du1 = -u[2] - u[3]
-    du2 =  x1 + p[1] * u[2]
-    du3 =  p[2] + u[3] * (x1 - p[3])
-    return @SVector [du1, du2, du3]
-end
-\end{lstlisting}
+]{../rossler/impl.jl}
 \end{minipage}
 % --- END FIRST COLUMN
 \switchcolumn
