@@ -1,3 +1,17 @@
+Benchmarks are compared via result object:
+
+```json
+{
+  "lang":"C",
+  "variant":"O3_ffast-math",
+  "scenario":"final_state",
+  "steps":20000,
+  "time_ns_median":123456789,
+  "ns_per_step":6172.8,
+  "notes":"clang-17, -march=native"
+}
+```
+
 ```mermaid
 mindmap
   root(Solving Small System of ODEs)

@@ -1,3 +1,9 @@
+# app/plots.jl
+"""
+FIXME: Integrate into App provides a simple interface ploting and
+animating ODEs 
+"""
+
 using Plots
 
 # ----------------------------
