@@ -256,6 +256,7 @@ Base.@kwdef struct CaseStudySpec{U,P}
     dt::Float64
     """ODE solver algorithm."""
     alg::Any = RK4()
+    adaptive::Bool = false         
     """Save grid (optional) passed to the solver."""
     saveat::Union{Nothing,Float64,AbstractVector{Float64}} = nothing
     """Relative tolerance for adaptive solves."""
@@ -266,8 +267,8 @@ end
 
 case_study_test_spec() =
     CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0], tspan=(0.0,100.0), dt=1e-2)
-case_study_benchmark_spec() =
-    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0], tspan=(0.0,2000.0), dt=1e-2)
+case_study_benchmark_spec(alg) =
+    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0], tspan=(0.0,2000.0), dt=1e-2, alg=alg)
 
 function Base.show(io::IO, spec::CaseStudySpec)
     print(io,
@@ -325,7 +326,12 @@ function run_case_study(spec::CaseStudySpec)
     ]
     # Warm-up solves for compilation
     for sys in systems
-        sp = ODESolveParams(; alg=alg, adaptive=true, reltol=spec.reltol, abstol=spec.abstol, dt=spec.dt, save_on=false, dense=false, save_everystep=false)
+        sp = spec.adaptive ?
+            ODESolveParams(; alg=alg, adaptive=true,  reltol=spec.reltol, abstol=spec.abstol,
+                            save_on=false, dense=false, save_everystep=false) :
+            ODESolveParams(; alg=alg, adaptive=false, dt=spec.dt,
+                            save_on=false, dense=false, save_everystep=false)
+
         solve_system_fast(sys, sp)
     end
     # Benchmark right-hand sides
@@ -337,11 +343,31 @@ function run_case_study(spec::CaseStudySpec)
     # Benchmark full solves with recommended benchmarking parameters
     solve_trials = Dict{String,BenchmarkTools.Trial}()
     for sys in systems
-        sp = benchmark_params(sys)
+        sp = spec.adaptive ?
+            ODESolveParams(; alg=alg, adaptive=true,  reltol=spec.reltol, abstol=spec.abstol,
+                            dense=false, save_everystep=false, save_on=false) :
+            ODESolveParams(; alg=alg, adaptive=false, dt=spec.dt,
+                            dense=false, save_everystep=false, save_on=false)
         trial = bench_solve(sys, sp; samples=1000, seconds=1.0)
         solve_trials[string(sys.f)] = trial
     end
     return (systems=systems, rhs_trials=rhs_trials, solve_trials=solve_trials)
+end
+case_study_benchmark_spec(alg; adaptive=false) =
+    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0],
+                  tspan=(0.0,2000.0), dt=1e-2, alg=alg, adaptive=adaptive)
+
+function run_studies()
+    rk4_fixed_results      = run_case_study(case_study_benchmark_spec(RK4();  adaptive=false))
+    tsit5_adaptive_results = run_case_study(case_study_benchmark_spec(Tsit5(); adaptive=true))
+    euler_fixed_results    = run_case_study(case_study_benchmark_spec(Euler(); adaptive=false))
+    midpoint_fixed_results   = run_case_study(case_study_benchmark_spec(Midpoint(); adaptive=false))
+    return Dict(
+        "RK4 Fixed"      => rk4_fixed_results,
+        "Tsit5 Adaptive" => tsit5_adaptive_results,
+        "Euler Fixed"    => euler_fixed_results,
+        "Midpoint Fixed" => midpoint_fixed_results,
+    )
 end
 
 
