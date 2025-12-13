@@ -208,9 +208,15 @@ function bench_rhs(sys::ODESys; samples::Int=100, evals::Int=1)
     u = sys.u0
     p = sys.p
     t = sys.tspan[1]
-    # Warm-up call outside the timed region
-    f(u, p, t)
-    return @benchmark $f($u, $p, $t) samples=samples evals=evals
+
+    if isinplace(sys)
+        du = similar(u)              # preallocate once (not inside the benchmark)
+        f(du, u, p, t)               # warm-up call
+        return @benchmark $f($du, $u, $p, $t) samples=samples evals=evals
+    else
+        f(u, p, t)                   # warm-up call
+        return @benchmark $f($u, $p, $t) samples=samples evals=evals
+    end
 end
 
 """
@@ -236,10 +242,10 @@ end
 Container for specifying a Case Study 1 experiment.  It holds the initial
 state, parameters, time span, timestep, solver algorithm and other optional
 fields used to instantiate each Rössler variant.  Instances of this type
-are passed to `run_case_study_1` to perform the simulation, benchmarking and
+are passed to `run_case_study` to perform the simulation, benchmarking and
 result collection.
 """
-Base.@kwdef struct CaseStudy1Spec{U,P}
+Base.@kwdef struct CaseStudySpec{U,P}
     """Initial state vector or static vector."""
     u0::U
     """Parameter vector or static vector."""
@@ -258,8 +264,14 @@ Base.@kwdef struct CaseStudy1Spec{U,P}
     abstol::Float64 = 1e-6
 end
 
+case_study_test_spec() =
+    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0], tspan=(0.0,200.0), dt=0.01)
+case_study_benchmark_spec() =
+    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0], tspan=(0.0,200.0), dt=0.01)
+
+
 """
-    run_case_study_1(spec) -> NamedTuple
+    run_case_study(spec) -> NamedTuple
 
 Run the Case Study 1 experiment described by `spec`.  This function constructs
 all supported Rössler variants, performs warm-up solves to trigger JIT
@@ -267,7 +279,7 @@ compilation, benchmarks the right–hand side and full solves using the
 fast-path solver, and returns a named tuple containing the systems, the
 micro-benchmark trials, and the full solve benchmark trials.
 """
-function run_case_study_1(spec::CaseStudy1Spec)
+function run_case_study(spec::CaseStudySpec)
     # Build variant systems.  `u0` and `p` may be vectors or static vectors.
     u0 = spec.u0
     p  = spec.p
@@ -279,11 +291,11 @@ function run_case_study_1(spec::CaseStudy1Spec)
     s_p  = p  isa SVector ? p  : SVector(p...)
     systems = [
         # Standard out-of-place implementation
-        ode_system(rossler,        u0,      p,   tspan; inplace=false, alg=alg, dt=dt),
+        ode_system(rossler, u0,      p,   tspan; inplace=false, alg=alg, dt=dt),
         # In-place implementation (state must be copied to avoid aliasing)
-        ode_system(rossler!,       copy(u0), p,   tspan; inplace=true,  alg=alg, dt=dt),
+        ode_system(rossler_naive!, copy(u0), p,   tspan; inplace=true,  alg=alg, dt=dt),
         # Static-array implementation (stack allocation)
-        ode_system(rossler_static, s_u0,    p,   tspan; inplace=false, alg=alg, dt=dt),
+        ode_system(rossler_static_naive, s_u0,    p,   tspan; inplace=false, alg=alg, dt=dt),
         # Type-stable out-of-place implementation
         ode_system(rossler_type_stable, u0, p,   tspan; inplace=false, alg=alg, dt=dt),
         # AD-ready allocation-free implementation

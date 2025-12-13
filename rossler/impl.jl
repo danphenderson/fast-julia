@@ -48,9 +48,7 @@ end
 # -------------------------
 # In-place solver
 # -------------------------
-function rossler_niave!(dx, vx, vp, t)
-
-
+function rossler_naive!(dx, vx, vp, t)
     x1 = vx[1]
     dx[1] = -vx[2] - vx[3]
     dx[2] =  x1 + vp[1] * vx[2]
@@ -79,7 +77,7 @@ end
 # -------------------------
 # Static solver (out-of-place)
 # -------------------------
-function rossler_static(vx, vp, t)
+function rossler_static_naive(vx, vp, t)
     x1 = vx[1]
     dx1 = -vx[2] - vx[3]
     dx2 =  x1 + vp[1] * vx[2]
