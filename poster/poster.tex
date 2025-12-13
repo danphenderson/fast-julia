@@ -243,7 +243,8 @@ of the Rössler system \eqref{eq:rossler}, together with a type-stable fixed-siz
 
 \end{tikzpicture}
 
-\captionof{figure}{Pipeline overview: model/code $\rightarrow$ JIT compile $\rightarrow$ benchmark/profile $\rightarrow$ visualize $\rightarrow$ iterate.}
+{\captionsetup{hypcap=false}%
+\captionof{figure}{Pipeline overview: model/code $\rightarrow$ JIT compile $\rightarrow$ benchmark/profile $\rightarrow$ visualize $\rightarrow$ iterate.}}
 
 \end{center}
 
@@ -319,12 +320,14 @@ end
 \centering
 \begin{minipage}[t]{0.475\linewidth} % Left figure
   \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
-  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}
+  {\captionsetup{hypcap=false}%
+  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}}
 \end{minipage}
 \hfill
 \begin{minipage}[t]{0.475\linewidth} % Right figure
   \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
-  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}
+  {\captionsetup{hypcap=false}%
+  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}}
 \end{minipage}
 \end{minipage}
 % --- Table placeholder: benchmark numbers ---
@@ -338,7 +341,8 @@ end
     SciML baseline   & 0.10 & 0.04 & $10.0\times$ \\
     \bottomrule
   \end{tabular}
-  \captionof{table}{Placeholder benchmark table comparing relative runtime, memory allocations and overall speedup factors.}
+  {\captionsetup{hypcap=false}%
+  \captionof{table}{Placeholder benchmark table comparing relative runtime, memory allocations and overall speedup factors.}}
 \end{center}
 
 \medskip
