@@ -1,4 +1,4 @@
-# New Rössler system implementations with explicit in-bounds checks.
+# Rössler system implementations with explicit in-bounds checks.
 # This file defines multiple variants of the Rössler right‑hand side.
 # - `rossler`: naive out-of-place implementation returning a new `Vector`.
 # - `rossler!`: in-place implementation writing into a preallocated `du`.
@@ -19,6 +19,13 @@ using StaticArrays
 # -------------------------
 # Naive out-of-place solver
 # -------------------------
+function rossler_naive(vx, vp, t)
+    dx1 = -vx[2] - vx[3]
+    dx2 =  vx[1] + vp[1] * vx[2]
+    dx3 =  vp[2] + vx[3] * (vx[1] - vp[3])
+    return [dx1, dx2, dx3]
+end
+
 """
     rossler(u, p, t)
 
@@ -41,6 +48,15 @@ end
 # -------------------------
 # In-place solver
 # -------------------------
+function rossler_niave!(dx, vx, vp, t)
+
+
+    x1 = vx[1]
+    dx[1] = -vx[2] - vx[3]
+    dx[2] =  x1 + vp[1] * vx[2]
+    dx[3] =  vp[2] + vx[3] * (x1 - vp[3])
+    return nothing
+end
 """
     rossler!(du, u, p, t)
 
@@ -61,8 +77,16 @@ returns `nothing`.
 end
 
 # -------------------------
-# Static solver
+# Static solver (out-of-place)
 # -------------------------
+function rossler_static(vx, vp, t)
+    x1 = vx[1]
+    dx1 = -vx[2] - vx[3]
+    dx2 =  x1 + vp[1] * vx[2]
+    dx3 =  vp[2] + vx[3] * (x1 - vp[3])
+    return @SVector [dx1, dx2, dx3]
+end
+
 """
     rossler_static(u, p, t)
 
