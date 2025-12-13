@@ -1,5 +1,6 @@
-# app/rossler.jl
-"""Module contains various implementations
+# rossler/impl.jl
+"""
+Module contains various implementations
 of the Rossler system in various programming languages.
 
 ----------------------------
@@ -9,6 +10,7 @@ y' =  x + a y
 z' =  b + z(x - c)
 ----------------------------
 """
+
 using StaticArrays
 
 # Naive out-of-place: allocates a new Vector each call.

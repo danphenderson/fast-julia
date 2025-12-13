@@ -1,31 +1,40 @@
 # rossler/benchmark.jl
 """Module includes rossler implementations (`rossler/impl.jl`)
 and related utilities, and herein, the ODE benchmarking pipeline is implemented.
-(satisfing the SciML ODEProblem interface)
+(satisfing the SciML ODESystem interface)
 """
 
-include("rossler.jl")
+include("impl.jl")
 
 using UUIDs
 using DifferentialEquations
 using SciMLBase   # for AbstractODESolution (more stable than DESolution)
+using BenchmarkTools
+using LinearAlgebra
+using StaticArrays
 
 # ===========================================================================
 # BEGIN defining types
 # ===========================================================================
-Base.@kwdef mutable struct ODESystem{F,Uv,Ux,P,A}
+Base.@kwdef mutable struct ODESystem{I,F,U0,P,A}
     f::F
-    vu0::Uv
-    vx0::Ux
+    u0::U0
     p::P
     tspan::Tuple{Float64,Float64}
     alg::A = Tsit5()
     dt::Float64 = 0.01
-
-    # Implementation metadata (needed to pick correct u0 + problem form)
-    inplace::Bool = false             # true => f!(du,u,p,t), false => du = f(u,p,t)
-    u0_kind::Symbol = :vector         # :vector => vu0, :static => vx0
 end
+
+ode_system(f, u0, p, tspan; inplace::Bool=false, alg=Tsit5(), dt=0.01) =
+    ODESystem{inplace}(f=f, u0=u0, p=p, tspan=tspan, alg=alg, dt=dt)
+
+@inline make_prob(sys::ODESystem{true})  = ODESystem{true}(sys.f, sys.u0, sys.tspan, sys.p)
+@inline make_prob(sys::ODESystem{false}) = ODESystem{false}(sys.f, sys.u0, sys.tspan, sys.p)
+
+ode_system(f::Function, vu0::Vector{Float64}, p::Vector{Float64}, tspan::Tuple{Float64,Float64}) =
+    ODESystem(f=f, vu0=vu0, p=p, tspan=tspan)
+ode_system(f::Function, vx0::SVector{3,Float64}, p::Vector{Float64}, tspan::Tuple{Float64,Float64}) =
+    ODESystem(f=f, vx0=vx0, p=p, tspan=tspan, inplace=false, u0_kind=:static)
 
 Base.@kwdef struct ODESolveParams{A}
     alg::A = Tsit5()
@@ -56,14 +65,26 @@ Base.@kwdef struct ODESolveParams{A}
     timeseries_errors::Bool = false
 end
 
-# Helpers: choose u0 + build ODEProblem with explicit in-placeness
-u0(sys::ODESystem) = sys.u0_kind === :static ? sys.vx0 : sys.vu0
+# Helpers: choose u0 + build ODESystem with explicit in-placeness
+@inline function u0(sys::ODESystem)
+    if sys.u0_kind === :vector
+        sys.vu0 === nothing && error("u0_kind=:vector but vu0 is not set")
+        return sys.vu0
+    elseif sys.u0_kind === :static
+        sys.vx0 === nothing && error("u0_kind=:static but vx0 is not set")
+        return sys.vx0
+    else
+        error("Unknown u0_kind=$(sys.u0_kind). Expected :vector or :static.")
+    end
+end
 
 function make_prob(sys::ODESystem)
     u0_ = u0(sys)
-    return sys.inplace ?
-        ODEProblem{true}(sys.f, u0_, sys.tspan, sys.p) :
-        ODEProblem{false}(sys.f, u0_, sys.tspan, sys.p)
+    if sys.inplace
+        return ODESystem{true}(sys.f, u0_, sys.tspan, sys.p)
+    else
+        return ODESystem{false}(sys.f, u0_, sys.tspan, sys.p)
+    end
 end
 
 function solve_system(sys::ODESystem, sp::ODESolveParams; kwargs...)
@@ -131,60 +152,51 @@ end
 
 # ===========================================================================
 # BEGIN benchmarking pipeline
-# =========================================================================== 
-function _benchmark_setup()
+# ===========================================================================
+
+
+function benchmark_setup()
     # set environment variables
     ENV["JULIA_NUM_THREADS"] = "1"
     ENV["JULIA_CPU_THREADS"] = "1"
     BLAS.set_num_threads(1)
+    return [
+        ode_system(rossler,  [1.0,1.0,1.0], [0.1,0.1,14.0], (0.0,200.0); inplace=false) # non-inplace, vector
+        ode_system(rossler,  SVector(1.0,1.0,1.0),  [0.1,0.1,14.0], (0.0,200.0); inplace=false) # non-inplace, static
+        ode_system(rossler!, [1.0,1.0,1.0],         [0.1,0.1,14.0], (0.0,200.0); inplace=true) # inplace, vector
+        # ode_system(rossler!, SVector(1.0,1.0,1.0),  [0.1,0.1,14.0], (0.0,200.0); inplace=true) # inplace, static
+    ]
 end
 
-function _ode_solve(sys::ODESystem, params::ODESolveParams)
-end
-
-function _test_ode_solve()
-end
-
-function _benchmark_ode_solve()
-end
-
-function _benchmark_close()
+function benchmark_shutdown()
+    # reset environment variables
+    ENV["JULIA_NUM_THREADS"] = "auto"
+    ENV["JULIA_CPU_THREADS"] = "auto"
+    BLAS.set_num_threads(4)
 end
 
 function benchmark_pipeline(sys::ODESystem, params::ODESolveParams)
-    @benchmark bench_result = begin
-        _benchmark_setup()
-        sol = _ode_solve(sys, params)
-        _test_ode_solve(sol)
-        _benchmark_ode_solve(sol)
-        _benchmark_close()
-    end
-    return ODEBenchmarkResult(
-        func_name=sys.f.name,
-        language="Julia",
-        variant="SciML",
-        solver=params.alg.name,
-        dt=params.dt,
+    sol = solve_system(sys, params)
+    result = ODEBenchmarkResult(
+        func_name="rossler",
+        language="julia",
+        variant=sys.inplace ? "inplace" : "non-inplace",
+        solver=string(params.alg),
+        dt=params.dt === nothing ? sys.dt : params.dt,
         reltol=params.reltol,
         abstol=params.abstol,
         tspan=sys.tspan,
         sol=sol
     )
+    return result
 end
 
-function benchmark_solver(sys::ODESystem, params::ODESolveParams, algs::Vector{<:DEAlgorithm})
-    results = []
-    for alg in algs
-        params.alg = alg
-        result = benchmark_pipeline(sys, params)
-        push!(results, result)
-    end
+function benchmark_pipelines()
+    sys = benchmark_setup()
+    params = benchmark_params(sys)
+    results = [benchmark_pipeline(s, params) for s in sys]
+    benchmark_shutdown()
     return results
-end
-
-function benchmark_all_solvers(sys::ODESystem, params::ODESolveParams)
-    algs = [Tsit5(), Tsit5(), Vern7(), Vern9()]
-    return benchmark_solver(sys, params, algs)
 end
 # ===========================================================================
 # END benchmarking pipeline
