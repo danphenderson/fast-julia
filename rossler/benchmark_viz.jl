@@ -162,6 +162,31 @@ function plot_rhs_violin(results)
                side = :both,
                linewidth = 0)
     return p
+
+end
+function plot_each_figure(results)
+    for (solver, study) in results
+        for (fn, trial) in study.rhs_trials
+            p = plot(trial.times .* 1e-6;
+                     xlabel = "Time (ms)",
+                     ylabel = "Frequency",
+                     title = "RHS call time distribution for $solver - $fn",
+                     legend = false)
+            savefig(p, "rhs_$solver-$fn.png")
+        end
+    end
+end
+function plot_rhs_histograms(results)
+    for (solver, study) in results
+        for (fn, trial) in study.rhs_trials
+            p = histogram(trial.times .* 1e-6;
+                          xlabel = "Time (ms)",
+                          ylabel = "Frequency",
+                          title = "RHS call time distribution for $solver - $fn",
+                          legend = false)
+            savefig(p, "rhs_$solver-$fn.png")
+        end
+    end
 end
 
 end # module BenchmarkViz
