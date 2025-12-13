@@ -1,7 +1,5 @@
 # TODO.md
 
-# TODO.md
-
 ## Goal
 Finish the poster with a single clear narrative: **small, production-grade code changes produce measurable ODE performance improvements in SciML** (Rössler as the case study), supported by a **reproducible benchmark + figure pipeline** and **clean, readable visuals**.
 
