@@ -179,31 +179,32 @@ end
 \noindent
 \begin{minipage}{\linewidth}
 \centering
-\begin{minipage}[t]{0.475\linewidth} % Left figure
-  \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
+\begin{minipage}[t]{0.48\linewidth} % Solve times
+  \includegraphics[width=0.97\linewidth]{midpoint_solve_times.png}
   {\captionsetup{hypcap=false}%
-  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}}
+  \captionof{figure}{Median solve times (ms) across Rössler variants using a fixed-step \texttt{Midpoint} solver.  Lower bars indicate faster solves; baseline is the naïve out-of-place RHS.}}
 \end{minipage}
 \hfill
-\begin{minipage}[t]{0.475\linewidth} % Right figure
-  \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
+\begin{minipage}[t]{0.48\linewidth} % RHS + allocations
+  \includegraphics[width=0.97\linewidth]{rhs_allocations.png}
   {\captionsetup{hypcap=false}%
-  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}}
+  \captionof{figure}{Median RHS time and per-call allocations for each variant.  Eliminating heap allocations delivers the largest performance gains.}}
 \end{minipage}
 \end{minipage}
-% --- Table placeholder: benchmark numbers ---
+
+\medskip
 \begin{center}
-  \begin{tabular}{lccc}
-    \toprule
-    \textbf{Method} & \textbf{Runtime (rel.)} & \textbf{Allocations (rel.)} & \textbf{Speedup} \\
-    \midrule
-    Naïve Julia      & 1.00 & 1.00 & $1.0\times$ \\
-    Optimized Julia  & 0.12 & 0.05 & $8.3\times$ \\
-    SciML baseline   & 0.10 & 0.04 & $10.0\times$ \\
-    \bottomrule
-  \end{tabular}
-  {\captionsetup{hypcap=false}%
-  \captionof{table}{Placeholder benchmark table comparing relative runtime, memory allocations and overall speedup factors.}}
+  \input{figures/midpoint_table.tex}
+\end{center}
+
+\medskip
+\begin{center}
+  \begin{minipage}[t]{0.7\linewidth}
+    \centering
+    \includegraphics[width=0.98\linewidth]{trajectory.png}
+    {\captionsetup{hypcap=false}%
+    \captionof{figure}{Phase-space trajectory for the optimized Rössler implementation, illustrating qualitative agreement across variants.}}
+  \end{minipage}
 \end{center}
 
 \medskip
