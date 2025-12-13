@@ -255,7 +255,7 @@ Base.@kwdef struct CaseStudySpec{U,P}
     """Time step for fixed-step solves."""
     dt::Float64
     """ODE solver algorithm."""
-    alg::Any = Tsit5()
+    alg::Any = RK4()
     """Save grid (optional) passed to the solver."""
     saveat::Union{Nothing,Float64,AbstractVector{Float64}} = nothing
     """Relative tolerance for adaptive solves."""
@@ -265,10 +265,28 @@ Base.@kwdef struct CaseStudySpec{U,P}
 end
 
 case_study_test_spec() =
-    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0], tspan=(0.0,200.0), dt=0.01)
+    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0], tspan=(0.0,100.0), dt=1e-2)
 case_study_benchmark_spec() =
-    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0], tspan=(0.0,200.0), dt=0.01)
+    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0], tspan=(0.0,2000.0), dt=1e-2)
 
+function Base.show(io::IO, spec::CaseStudySpec)
+    print(io,
+        "CaseStudySpec(u0=$(spec.u0), p=$(spec.p), tspan=$(spec.tspan), ",
+        "dt=$(spec.dt), alg=$(spec.alg), saveat=$(spec.saveat), ",
+        "reltol=$(spec.reltol), abstol=$(spec.abstol))"
+    )
+end
+function pretty_print(spec::CaseStudySpec)
+    println("Case Study 1 Experiment Specification:")
+    println("  u0: $(spec.u0)")
+    println("  p: $(spec.p)")
+    println("  tspan: $(spec.tspan)")
+    println("  dt: $(spec.dt)")
+    println("  alg: $(spec.alg)")
+    println("  saveat: $(spec.saveat)")
+    println("  reltol: $(spec.reltol)")
+    println("  abstol: $(spec.abstol)")
+end
 
 """
     run_case_study(spec) -> NamedTuple
@@ -291,11 +309,15 @@ function run_case_study(spec::CaseStudySpec)
     s_p  = p  isa SVector ? p  : SVector(p...)
     systems = [
         # Standard out-of-place implementation
+        ode_system(rossler_naive,    u0,      p,   tspan; inplace=false, alg=alg, dt=dt),
+        # Standard in-place implementation
         ode_system(rossler, u0,      p,   tspan; inplace=false, alg=alg, dt=dt),
         # In-place implementation (state must be copied to avoid aliasing)
         ode_system(rossler_naive!, copy(u0), p,   tspan; inplace=true,  alg=alg, dt=dt),
+        ode_system(rossler!,           copy(u0), p,   tspan; inplace=true,  alg=alg, dt=dt),
         # Static-array implementation (stack allocation)
         ode_system(rossler_static_naive, s_u0,    p,   tspan; inplace=false, alg=alg, dt=dt),
+        ode_system(rossler_static,     s_u0,    p,   tspan; inplace=false, alg=alg, dt=dt),
         # Type-stable out-of-place implementation
         ode_system(rossler_type_stable, u0, p,   tspan; inplace=false, alg=alg, dt=dt),
         # AD-ready allocation-free implementation
@@ -316,7 +338,7 @@ function run_case_study(spec::CaseStudySpec)
     solve_trials = Dict{String,BenchmarkTools.Trial}()
     for sys in systems
         sp = benchmark_params(sys)
-        trial = bench_solve(sys, sp; samples=10, seconds=1.0)
+        trial = bench_solve(sys, sp; samples=1000, seconds=1.0)
         solve_trials[string(sys.f)] = trial
     end
     return (systems=systems, rhs_trials=rhs_trials, solve_trials=solve_trials)
@@ -330,7 +352,7 @@ test_params(sys::ODESys) =
                    save_everystep=true, dense=true)
 
 benchmark_params(sys::ODESys) =
-    ODESolveParams(; alg=sys.alg, adaptive=true,
+    ODESolveParams(; alg=sys.alg, adaptive=false, dt=sys.dt,
                    dense=false, save_everystep=false, save_on=false)
 
 interp_params(sys::ODESys) =
@@ -353,6 +375,7 @@ Base.@kwdef struct ODEBenchmarkResult
     abstol::Float64
     tspan::Tuple{Float64,Float64}
     sol::Union{Nothing,SciMLBase.AbstractODESolution} = nothing
+    all
 end
 
 function Base.show(io::IO, r::ODEBenchmarkResult)
@@ -383,6 +406,9 @@ end
 function benchmark_setup()
     BLAS.set_num_threads(1)
     return [
+        ode_system(rossler_naive,    [1.0,1.0,1.0],              [0.1,0.1,14.0],   (0.0,200.0); inplace=false),
+        ode_system(rossler_naive!,     [1.0,1.0,1.0],              [0.1,0.1,14.0],   (0.0,200.0); inplace=true),
+        ode_system(rossler_static_naive,SVector(1.0,1.0,1.0),   [0.1,0.1,14.0],   (0.0,200.0); inplace=false),
         ode_system(rossler,            [1.0,1.0,1.0],              [0.1,0.1,14.0],   (0.0,200.0); inplace=false),
         ode_system(rossler!,           [1.0,1.0,1.0],              [0.1,0.1,14.0],   (0.0,200.0); inplace=true),
         ode_system(rossler_static,     SVector(1.0,1.0,1.0),       [0.1,0.1,14.0],   (0.0,200.0); inplace=false),
