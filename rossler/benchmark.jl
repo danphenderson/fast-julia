@@ -4,6 +4,8 @@ and related utilities, and herein, the ODE benchmarking pipeline is implemented.
 (satisfing the SciML ODESystem interface)
 """
 
+# Bring in the Rössler right–hand side implementations.  This include defines
+# `rossler`, `rossler!`, `rossler_static`, `rossler_type_stable` and `rossler_ad`.
 include(joinpath(@__DIR__, "impl.jl"))
 
 
@@ -115,6 +117,170 @@ function solve_system(sys::ODESys, sp::ODESolveParams; kwargs...)
     return solve(prob, sp.alg; kw...)
 end
 
+################################################################################
+# Fast-path solve without dynamic NamedTuple merging
+################################################################################
+"""
+    solve_system_fast(sys, sp)
+
+Solve the ODE problem associated with `sys` under the solve parameters `sp`
+without allocating intermediate keyword arguments via `NamedTuple` merging.
+This is intended for benchmarking loops where dynamic keyword merging can
+become a bottleneck.  The arguments are passed directly to `solve` with a
+fixed set of keywords.
+"""
+function solve_system_fast(sys::ODESys, sp::ODESolveParams)
+    prob = make_prob(sys)
+    # Determine the effective timestep (for non-adaptive solves)
+    dt = sp.dt === nothing ? sys.dt : sp.dt
+    if sp.adaptive
+        return solve(prob, sp.alg;
+            adaptive=true,
+            reltol=sp.reltol,
+            abstol=sp.abstol,
+            saveat=sp.saveat,
+            save_start=sp.save_start,
+            save_end=sp.save_end,
+            save_everystep=sp.save_everystep,
+            save_on=sp.save_on,
+            dense=sp.dense,
+            alias_u0=sp.alias_u0,
+            timeseries_errors=sp.timeseries_errors,
+        )
+    else
+        return solve(prob, sp.alg;
+            adaptive=false,
+            dt=dt,
+            saveat=sp.saveat,
+            save_start=sp.save_start,
+            save_end=sp.save_end,
+            save_everystep=sp.save_everystep,
+            save_on=sp.save_on,
+            dense=sp.dense,
+            alias_u0=sp.alias_u0,
+            timeseries_errors=sp.timeseries_errors,
+        )
+    end
+end
+
+################################################################################
+# Benchmark helpers
+################################################################################
+"""
+    bench_rhs(sys; samples=100, evals=1)
+
+Return a `BenchmarkTools.Trial` object representing a micro-benchmark of a
+single right–hand side call for the ODE system `sys`.  This benchmark warms
+up compilation automatically and measures allocations and runtime for a
+single call to `sys.f(sys.u0, sys.p, sys.tspan[1])`.
+"""
+function bench_rhs(sys::ODESys; samples::Int=100, evals::Int=1)
+    f = sys.f
+    u = sys.u0
+    p = sys.p
+    t = sys.tspan[1]
+    # Warm-up call outside the timed region
+    f(u, p, t)
+    return @benchmark $f($u, $p, $t) samples=samples evals=evals
+end
+
+"""
+    bench_solve(sys, sp; samples=10, seconds=1.0)
+
+Return a `BenchmarkTools.Trial` object representing a benchmark of solving
+the ODE system `sys` with parameters `sp` using the fast-path solver.
+The first solve is run outside of the measurement to trigger compilation.
+`samples` and `seconds` are passed through to the `@benchmark` macro.
+"""
+function bench_solve(sys::ODESys, sp::ODESolveParams; samples::Int=10, seconds=1.0)
+    # Warm-up to compile everything
+    solve_system_fast(sys, sp)
+    return @benchmark solve_system_fast($sys, $sp) samples=samples seconds=seconds evals=1
+end
+
+################################################################################
+# Case study 1 experiment spec and runner
+################################################################################
+"""
+    CaseStudy1Spec
+
+Container for specifying a Case Study 1 experiment.  It holds the initial
+state, parameters, time span, timestep, solver algorithm and other optional
+fields used to instantiate each Rössler variant.  Instances of this type
+are passed to `run_case_study_1` to perform the simulation, benchmarking and
+result collection.
+"""
+Base.@kwdef struct CaseStudy1Spec{U,P}
+    """Initial state vector or static vector."""
+    u0::U
+    """Parameter vector or static vector."""
+    p::P
+    """Integration time span."""
+    tspan::Tuple{Float64,Float64}
+    """Time step for fixed-step solves."""
+    dt::Float64
+    """ODE solver algorithm."""
+    alg::Any = Tsit5()
+    """Save grid (optional) passed to the solver."""
+    saveat::Union{Nothing,Float64,AbstractVector{Float64}} = nothing
+    """Relative tolerance for adaptive solves."""
+    reltol::Float64 = 1e-3
+    """Absolute tolerance for adaptive solves."""
+    abstol::Float64 = 1e-6
+end
+
+"""
+    run_case_study_1(spec) -> NamedTuple
+
+Run the Case Study 1 experiment described by `spec`.  This function constructs
+all supported Rössler variants, performs warm-up solves to trigger JIT
+compilation, benchmarks the right–hand side and full solves using the
+fast-path solver, and returns a named tuple containing the systems, the
+micro-benchmark trials, and the full solve benchmark trials.
+"""
+function run_case_study_1(spec::CaseStudy1Spec)
+    # Build variant systems.  `u0` and `p` may be vectors or static vectors.
+    u0 = spec.u0
+    p  = spec.p
+    tspan = spec.tspan
+    dt = spec.dt
+    alg = spec.alg
+    # Ensure static variants are correctly typed
+    s_u0 = u0 isa SVector ? u0 : SVector(u0...)
+    s_p  = p  isa SVector ? p  : SVector(p...)
+    systems = [
+        # Standard out-of-place implementation
+        ode_system(rossler,        u0,      p,   tspan; inplace=false, alg=alg, dt=dt),
+        # In-place implementation (state must be copied to avoid aliasing)
+        ode_system(rossler!,       copy(u0), p,   tspan; inplace=true,  alg=alg, dt=dt),
+        # Static-array implementation (stack allocation)
+        ode_system(rossler_static, s_u0,    p,   tspan; inplace=false, alg=alg, dt=dt),
+        # Type-stable out-of-place implementation
+        ode_system(rossler_type_stable, u0, p,   tspan; inplace=false, alg=alg, dt=dt),
+        # AD-ready allocation-free implementation
+        ode_system(rossler_ad,     s_u0,    s_p, tspan; inplace=false, alg=alg, dt=dt),
+    ]
+    # Warm-up solves for compilation
+    for sys in systems
+        sp = ODESolveParams(; alg=alg, adaptive=true, reltol=spec.reltol, abstol=spec.abstol, dt=spec.dt, save_on=false, dense=false, save_everystep=false)
+        solve_system_fast(sys, sp)
+    end
+    # Benchmark right-hand sides
+    rhs_trials = Dict{String,BenchmarkTools.Trial}()
+    for sys in systems
+        trial = bench_rhs(sys; samples=100, evals=1)
+        rhs_trials[string(sys.f)] = trial
+    end
+    # Benchmark full solves with recommended benchmarking parameters
+    solve_trials = Dict{String,BenchmarkTools.Trial}()
+    for sys in systems
+        sp = benchmark_params(sys)
+        trial = bench_solve(sys, sp; samples=10, seconds=1.0)
+        solve_trials[string(sys.f)] = trial
+    end
+    return (systems=systems, rhs_trials=rhs_trials, solve_trials=solve_trials)
+end
+
 
 # Parameter presets
 test_params(sys::ODESys) =
@@ -176,9 +342,11 @@ end
 function benchmark_setup()
     BLAS.set_num_threads(1)
     return [
-        ode_system(rossler,        [1.0,1.0,1.0],        [0.1,0.1,14.0], (0.0,200.0); inplace=false),
-        ode_system(rossler_static, SVector(1.0,1.0,1.0), [0.1,0.1,14.0], (0.0,200.0); inplace=false),
-        ode_system(rossler!,       [1.0,1.0,1.0],        [0.1,0.1,14.0], (0.0,200.0); inplace=true),
+        ode_system(rossler,            [1.0,1.0,1.0],              [0.1,0.1,14.0],   (0.0,200.0); inplace=false),
+        ode_system(rossler!,           [1.0,1.0,1.0],              [0.1,0.1,14.0],   (0.0,200.0); inplace=true),
+        ode_system(rossler_static,     SVector(1.0,1.0,1.0),       [0.1,0.1,14.0],   (0.0,200.0); inplace=false),
+        ode_system(rossler_type_stable,[1.0,1.0,1.0],              [0.1,0.1,14.0],   (0.0,200.0); inplace=false),
+        ode_system(rossler_ad,         SVector(1.0,1.0,1.0),       SVector(0.1,0.1,14.0), (0.0,200.0); inplace=false),
     ]
 end
 
@@ -189,10 +357,26 @@ end
 
 function benchmark_pipeline(sys::ODESys, params::ODESolveParams)
     sol = solve_system(sys, params)
+    # Determine a human-readable variant name based on the function used
+    variant = begin
+        if sys.f === rossler
+            "standard"
+        elseif sys.f === rossler!
+            "inplace"
+        elseif sys.f === rossler_static
+            "static"
+        elseif sys.f === rossler_type_stable
+            "type-stable"
+        elseif sys.f === rossler_ad
+            "ad-ready"
+        else
+            isinplace(sys) ? "inplace" : "non-inplace"
+        end
+    end
     return ODEBenchmarkResult(
         func_name="rossler",
         language="julia",
-        variant=isinplace(sys) ? "inplace" : "non-inplace",
+        variant=variant,
         solver=string(params.alg),
         dt=params.dt === nothing ? sys.dt : params.dt,
         reltol=params.reltol,
