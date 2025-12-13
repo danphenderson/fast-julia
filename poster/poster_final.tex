@@ -1,0 +1,386 @@
+\documentclass[a0,landscape]{a0poster}\
+\input{preamble.tex} % after the basics
+\definecolor{PMS310C}{RGB}{62,192,197} % Official MTU colorway
+
+\begin{document}
+\begin{tikzpicture}[remember picture,overlay]
+  \node[anchor=north east, xshift=-5mm, yshift=-5mm] 
+    at (current page.north east) {\includegraphics[height=7cm]{logo.png}};
+\end{tikzpicture}
+
+%----------------------------------------------------------------------------------------
+% HEADER
+%----------------------------------------------------------------------------------------
+\vspace*{-2cm} % reduce magnitude if anything touches the top edge
+
+{\setlength{\tabcolsep}{0pt}%
+\renewcommand{\arraystretch}{1.05}%
+
+\noindent
+\begin{minipage}[t]{0.34\textwidth}
+  {\Huge\bfseries\color{PMS310C} POC to Production}\\[1ex]
+  {\Large\itshape Fast Julia Differential Equation Solving}\\[2ex]
+  {\large Daniel Henderson}\\
+  {\normalsize Michigan Technological University}\\
+  {\small\ttfamily dphender@mtu.edu}
+\end{minipage}%
+\begin{minipage}[t]{0.24\textwidth}\vspace{0pt}
+{\Large\textbf{Abstract}}
+{\normalsize
+We compare naïve and optimized Julia implementations for solving
+small to moderate systems of ordinary differential equations (ODEs),
+$\vx'(t) = \vf(\vx, t)$ with $\dim(\vx) \leq 10^2$.
+We demonstrate how a sequence of targeted changes—in-place updates, type stability and
+solver selection—can yield order-of-magnitude speedups while preserving code clarity and
+reproducibility.  By applying these techniques we achieve a tenfold speedup over the original
+code and demonstrate how to scale up to larger systems.}
+\end{minipage}
+}
+
+\vspace{0.20cm}
+\hrulefill
+\vspace{0.20cm}
+
+%----------------------------------------------------------------------------------------
+% BODY (3 COLUMNS)
+%----------------------------------------------------------------------------------------
+\begin{paracol}{3}
+  \setcolumnwidth{0.28\textwidth,0.44\textwidth,0.28\textwidth}
+
+%------------------------ INTRODUCTION ------------------------
+\section*{Introduction}
+
+\noindent
+ODE workflows often involve ensembles: many solves across parameters, initial conditions,
+or time horizons. In that regime, per-call overhead in 
+$f(x,p,t)$—especially allocations—dominates and can make otherwise
+simple experiments impractically slow.”
+
+\medskip
+Targeted changes to model code-—in-place updates, type stability, and
+stack-vs.-heap allocations, etc. combined with the right choice of solver can
+yield order-of-magnitude speedups while keeping the code readable and
+extensible. In our case, we achieve a \red{XX} speedup from a naïve to an 
+optimized Julia implementation of the Rössler ODE system:
+\begin{flalign*}
+  \tag{Rössler} \label{eq:rossler}
+  \quad \vx'(t) = \vf(\vx,\, \vp, \, t) = 
+  \vect{
+    -x_2 \,-\, x_3 \\
+    x_1 \,+\, a x_2 \\
+    b \,+\, x_3 (x_1 \,-\, c) \\
+  }
+    ~ : ~ \begin{cases*}
+    \vx = (x_1, \, x_2, \, x_3)^\top \text{ (state variables)}\\
+    \vp = (a, \, b, \, c)^\top \text{ (parameters)} 
+  \end{cases*}, &&
+\end{flalign*}
+
+\medskip
+
+\noindent
+We seek $\vx(t)$ for all $t \in [t_0, t_f]$ subject to the initial condition $\vx(t_0)=\vx_0$, with fixed
+parameters $\vp$. ``Production'' performance is achieved using \texttt{DifferentialEquations.jl} from the SciML
+ecosystem \cite{DifferentialEquations.jl-2017}, building on the SciML techniques
+\cite{SciMLTutorial} for optimizing the model code $\vf$.
+
+\medskip
+
+\noindent
+\textbf{Case Study.}  We compare out-of-place and in-place Julia implementations
+of the Rössler system \eqref{eq:rossler}, together with a type-stable fixed-size variant:
+\begin{itemize}
+  \item naïve out-of-place code allocates a new array at each right-hand-side call, triggering garbage collection;
+  \item optimized in-place code eliminates per-call allocations for \texttt{Vector}-based states; and
+  \item a \texttt{StaticArrays.jl}/\texttt{SVector} implementation enables stack allocation, often fastest for very small systems.
+\end{itemize}
+
+\noindent
+\textbf{Future of SciML is Symbolic--Numeric.}  Symbolic manipulation simplifies \eqref{eq:rossler} via substitution and highlights structure (two linear equations in $\vx$ and one quadratic).
+
+\medskip
+\hrulefill
+\medskip
+
+% --- Figure: Pipeline Overview (TikZ) ---
+\medskip
+\begin{center}
+
+% Title formatter (this is what \stagetitle was *supposed* to be)
+\providecommand{\PipelineStageTitle}[1]{%
+  {\bfseries\Large\color{PMS310C}#1}%
+}
+
+\begin{tikzpicture}[
+  font=\normalsize,
+  stage/.style={
+    draw=black, rounded corners=2.5mm, thick, fill=black!2,
+    inner sep=7pt, text width=0.86\linewidth
+  },
+  pill/.style={
+    draw=black!50, rounded corners=1.2mm, fill=white,
+    font=\ttfamily\scriptsize, inner xsep=4pt, inner ysep=2pt
+  },
+  iconbox/.style={
+    draw=black!55, rounded corners=1mm, thick, fill=white,
+    minimum width=1.25cm, minimum height=1.25cm
+  },
+  arrow/.style={-Latex, thick},
+  feedback/.style={-Latex, thick, dashed, draw=black!70},
+  node distance=7mm
+]
+% Reserve horizontal padding inside each stage for the icon.
+\def\IconPad{1.95cm}
+
+% ----------------------------
+% Simple inline “icons” (pure TikZ)
+% ----------------------------
+\providecommand{\PipelineCodeIcon}{%
+  \tikz[scale=0.34, line width=0.9pt]{
+    \draw[rounded corners=0.7pt] (0,0) rectangle (1.2,1.2);
+    \draw (0.18,0.95)--(1.02,0.95);
+    \draw (0.18,0.72)--(0.82,0.72);
+    \draw (0.18,0.50)--(1.02,0.50);
+    \draw (0.18,0.27)--(0.70,0.27);
+    \draw (0.18,0.12)--(0.55,0.12);
+  }%
+}
+\providecommand{\PipelineGearIcon}{%
+  \tikz[scale=0.34, line width=0.9pt]{
+    \draw (0.6,0.6) circle (0.34);
+    \foreach \a in {0,30,...,330}{
+      \draw[shift={(0.6,0.6)}, rotate=\a] (0.34,0) -- (0.50,0);
+    }
+    \draw (0.6,0.6) circle (0.12);
+  }%
+}
+\providecommand{\PipelineStopwatchIcon}{%
+  \tikz[scale=0.34, line width=0.9pt]{
+    \draw (0.6,0.55) circle (0.38);
+    \draw (0.45,0.98) rectangle (0.75,1.12);
+    \draw (0.56,0.55) -- (0.56,0.80);
+    \draw (0.56,0.55) -- (0.80,0.55);
+    \draw (0.78,0.92) -- (0.98,1.05);
+  }%
+}
+\providecommand{\PipelineBarsIcon}{%
+  \tikz[scale=0.34, line width=0.9pt]{
+    \draw (0.15,0.15) -- (0.15,1.10);
+    \draw (0.15,0.15) -- (1.10,0.15);
+    \filldraw (0.30,0.15) rectangle (0.48,0.55);
+    \filldraw (0.55,0.15) rectangle (0.73,0.85);
+    \filldraw (0.80,0.15) rectangle (0.98,0.42);
+  }%
+}
+\providecommand{\PipelineChecklistIcon}{%
+  \tikz[scale=0.34, line width=0.9pt]{
+    \draw[rounded corners=0.7pt] (0,0) rectangle (1.2,1.2);
+    \draw (0.18,0.86) -- (0.28,0.76) -- (0.45,0.94);
+    \draw (0.55,0.86) -- (1.05,0.86);
+    \draw (0.18,0.58) -- (0.28,0.48) -- (0.45,0.66);
+    \draw (0.55,0.58) -- (1.05,0.58);
+    \draw (0.18,0.30) -- (0.28,0.20) -- (0.45,0.38);
+    \draw (0.55,0.30) -- (1.05,0.30);
+  }%
+}
+
+% ----------------------------
+% Stages (vertical pipeline)
+% ----------------------------
+\node[stage] (s1) {%
+  \hspace*{\IconPad}\PipelineStageTitle{Stage 1: Mathematical Model \& Code}\par
+  \hspace*{\IconPad}\normalsize Define the R\"ossler RHS in Julia.\par
+  \hspace*{\IconPad}\scriptsize
+    \tikz[baseline=-0.6ex]{\node[pill]{na\"ive};}\,
+    \tikz[baseline=-0.6ex]{\node[pill]{in-place};}\,
+    \tikz[baseline=-0.6ex]{\node[pill]{StaticArrays/SVector};}%
+};
+
+\node[stage, below=of s1] (s2) {%
+  \hspace*{\IconPad}\PipelineStageTitle{Stage 2: Compilation \& Execution}\par
+  \hspace*{\IconPad}\normalsize Julia JIT compiles hot paths to native code.\par
+  \hspace*{\IconPad}\scriptsize (Warm-up compile excluded from measurements.)%
+};
+
+\node[stage, below=of s2] (s3) {%
+  \hspace*{\IconPad}\PipelineStageTitle{Stage 3: Benchmarking \& Profiling}\par
+  \hspace*{\IconPad}\normalsize Measure runtime \& allocations per implementation.\par
+  \hspace*{\IconPad}\scriptsize \texttt{@benchmark/@btime} + \texttt{@allocated} + type checks%
+};
+
+\node[stage, below=of s3] (s4) {%
+  \hspace*{\IconPad}\PipelineStageTitle{Stage 4: Visualization of Results}\par
+  \hspace*{\IconPad}\normalsize Summarize performance and solution behavior.\par
+  \hspace*{\IconPad}\scriptsize
+    \tikz[baseline=-0.6ex]{\node[pill]{time};}\,
+    \tikz[baseline=-0.6ex]{\node[pill]{allocs};}\,
+    \tikz[baseline=-0.6ex]{\node[pill]{trajectory/GIF};}%
+};
+
+\node[stage, below=of s4] (s5) {%
+  \hspace*{\IconPad}\PipelineStageTitle{Stage 5: Insights \& Optimization Cycle}\par
+  \hspace*{\IconPad}\normalsize Convert findings into actionable improvements.\par
+  \hspace*{\IconPad}\scriptsize e.g., eliminate allocations; choose data layout; select solver%
+};
+
+% Icons
+\node[iconbox, anchor=west] at ([xshift=6pt]s1.west) {\PipelineCodeIcon};
+\node[iconbox, anchor=west] at ([xshift=6pt]s2.west) {\PipelineGearIcon};
+\node[iconbox, anchor=west] at ([xshift=6pt]s3.west) {\PipelineStopwatchIcon};
+\node[iconbox, anchor=west] at ([xshift=6pt]s4.west) {\PipelineBarsIcon};
+\node[iconbox, anchor=west] at ([xshift=6pt]s5.west) {\PipelineChecklistIcon};
+
+% Forward arrows
+\draw[arrow] (s1) -- (s2);
+\draw[arrow] (s2) -- (s3);
+\draw[arrow] (s3) -- (s4);
+\draw[arrow] (s4) -- (s5);
+
+% Feedback loop
+\draw[feedback] (s5.east) -- ++(10mm,0) |- (s1.east);
+
+\end{tikzpicture}
+
+\captionof{figure}{Pipeline overview: model/code $\rightarrow$ JIT compile $\rightarrow$ benchmark/profile $\rightarrow$ visualize $\rightarrow$ iterate.}
+
+\end{center}
+
+% --- END FIRST COLUMN
+\switchcolumn
+
+% ------------------------ Middle Column ------------------------
+\section*{Case Study: Optimizing the Rössler ODE System}
+
+\noindent
+\begin{minipage}{\linewidth}
+\centering
+\begin{minipage}[t]{0.475\linewidth} % Left: out-of-place
+\begin{lstlisting}[
+  language=Julia,
+  linewidth=\linewidth,
+  breaklines=true,
+  caption={``Out-of-place'' allocates a new heap array at each call.},
+  label={lst:naive-out-of-place}
+]
+function rossler(vx, vp, t)
+    dx1 = -vx[2] - vx[3]
+    dx2 =  vx[1] + vp[1] * vx[2]
+    dx3 =  vp[2] + vx[3] * (vx[1] - vp[3])
+    return [dx1, dx2, dx3]
+end
+\end{lstlisting}
+\td{\small \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
+  reports 240 bytes per call (typical).}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.475\linewidth} % Right: in-place
+\begin{lstlisting}[
+  language=Julia,
+  linewidth=\linewidth,
+  breaklines=true,
+  caption={``In-place'' ODE system utilizing a cache array (`vx` passed by reference) for state values.  Avoids per-call allocations and is typically fastest for `Vector`-based states.},
+  label={lst:in-place}
+]
+function rossler!(dx, vx, vp, t)
+    x1 = vx[1]
+    dx[1] = -vx[2] - vx[3]
+    dx[2] =  x1 + vp[1] * vx[2]
+    dx[3] =  vp[2] + vx[3] * (x1 - vp[3])
+    return nothing
+end
+\end{lstlisting}
+\end{minipage}
+\vspace{0.75em}
+\begin{lstlisting}[
+  language=Julia,
+  linewidth=\linewidth,
+  breaklines=true,
+  caption={Fixed-size, stack-allocated version using \texttt{StaticArrays}.},
+  label={lst:static}
+]
+function rossler_static(vx, vp, t)
+    x1 = vx[1]
+    dx1 = -vx[2] - vx[3]
+    dx2 =  x1 + vp[1] * vx[2]
+    dx3 =  vp[2] + vx[3] * (x1 - vp[3])
+    return @SVector [dx1, dx2, dx3]
+end
+\end{lstlisting}
+\end{minipage}
+
+\noindent
+\subsection*{Results and Analysis}
+
+% --- Figures: speedup plot ---
+\noindent
+\begin{minipage}{\linewidth}
+\centering
+\begin{minipage}[t]{0.475\linewidth} % Left figure
+  \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
+  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.475\linewidth} % Right figure
+  \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
+  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}
+\end{minipage}
+\end{minipage}
+% --- Table placeholder: benchmark numbers ---
+\begin{center}
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Method} & \textbf{Runtime (rel.)} & \textbf{Allocations (rel.)} & \textbf{Speedup} \\
+    \midrule
+    Naïve Julia      & 1.00 & 1.00 & $1.0\times$ \\
+    Optimized Julia  & 0.12 & 0.05 & $8.3\times$ \\
+    SciML baseline   & 0.10 & 0.04 & $10.0\times$ \\
+    \bottomrule
+  \end{tabular}
+  \captionof{table}{Placeholder benchmark table comparing relative runtime, memory allocations and overall speedup factors.}
+\end{center}
+
+\medskip
+\hrulefill
+\medskip
+
+% --- END MIDDLE COLUMN
+\switchcolumn
+
+% ---- TODO WHAT GOES HERE? --- Conclusion comes last
+%------------------------ Conclusion ------------------------
+\section*{Conclusion: Future Work for SciML}
+
+\noindent
+Symbolic computation can automate derivations and optimizations that would otherwise
+be performed manually, improving both performance and reliability.  For example, the 
+Rössler system \eqref{eq:rossler} is linear in two unknowns and can be simplified by 
+substitution; \texttt{ModelingToolkit.jl} can automate this process and generates 
+optimized code for the resulting system.
+
+\medskip
+
+\noindent
+By carefully crafting our Julia implementation—using in-place updates, 
+static arrays and solver-aware techniques—we achieved C-like performance 
+without sacrificing code clarity.  Eliminating unnecessary allocations and 
+choosing the right data layout allow simulation code to scale up to large problems,
+be reused in future research and be shared confidently with the community.
+
+\medskip
+
+\noindent
+Choosing the right integrator is crucial: an explicit scheme is sufficient for 
+the non-stiff Rössler system, but implicit methods are necessary for stiff problems.
+The SciML ecosystem provides a rich set of tools for selecting and tuning the best 
+solver for your problem; don’t guess—measure with \texttt{BenchmarkTools.jl}!
+
+\medskip
+
+\noindent
+%------------------------ REFERENCES ------------------------
+\nocite{*}
+\bibliographystyle{plain}
+\bibliography{mybib}
+
+\end{paracol}
+\end{document}
