@@ -52,8 +52,8 @@ code and demonstrate how to scale up to larger systems.}
 
 \noindent
 ODE workflows often involve ensembles: many solves across parameters, initial conditions,
-or time horizons. In that regime, per-call overhead in 
-$f(x,p,t)$—especially allocations—dominates and can make otherwise
+or time horizons. In that regime, per-call overhead in the SciML RHS
+$f!(\vu, \vx, \vp, t)$—especially allocations—dominates and can make otherwise
 simple experiments impractically slow.”
 
 \medskip
@@ -118,14 +118,14 @@ the lowered code to understand the impact of these changes.
   language=Julia,
   linewidth=\linewidth,
   breaklines=true,
-  caption={``Out-of-place'' allocates a new heap array at each call.},
+  caption={Out-of-place RHS using the SciML interface `f(u,p,t)` (returns a fresh array).},
   label={lst:naive-out-of-place}
 ]
-function rossler(vx, vp, t)
-    dx1 = -vx[2] - vx[3]
-    dx2 =  vx[1] + vp[1] * vx[2]
-    dx3 =  vp[2] + vx[3] * (vx[1] - vp[3])
-    return [dx1, dx2, dx3]
+function rossler(u, p, t)
+    du1 = -u[2] - u[3]
+    du2 =  u[1] + p[1] * u[2]
+    du3 =  p[2] + u[3] * (u[1] - p[3])
+    return [du1, du2, du3]
 end
 \end{lstlisting}
 \td{\small \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
@@ -137,14 +137,14 @@ end
   language=Julia,
   linewidth=\linewidth,
   breaklines=true,
-  caption={``In-place'' ODE system utilizing a cache array (`vx` passed by reference) for state values.  Avoids per-call allocations and is typically fastest for `Vector`-based states.},
+  caption={In-place RHS using the SciML signature `f!(du,u,p,t)`.  Avoids per-call allocations and is typically fastest for `Vector`-based states.},
   label={lst:in-place}
 ]
-function rossler!(dx, vx, vp, t)
-    x1 = vx[1]
-    dx[1] = -vx[2] - vx[3]
-    dx[2] =  x1 + vp[1] * vx[2]
-    dx[3] =  vp[2] + vx[3] * (x1 - vp[3])
+function rossler!(du, u, p, t)
+    x1 = u[1]
+    du[1] = -u[2] - u[3]
+    du[2] =  x1 + p[1] * u[2]
+    du[3] =  p[2] + u[3] * (x1 - p[3])
     return nothing
 end
 \end{lstlisting}
@@ -157,12 +157,12 @@ end
   caption={Fixed-size, stack-allocated version using \texttt{StaticArrays}.},
   label={lst:static}
 ]
-function rossler_static(vx, vp, t)
-    x1 = vx[1]
-    dx1 = -vx[2] - vx[3]
-    dx2 =  x1 + vp[1] * vx[2]
-    dx3 =  vp[2] + vx[3] * (x1 - vp[3])
-    return @SVector [dx1, dx2, dx3]
+function rossler_static(u, p, t)
+    x1 = u[1]
+    du1 = -u[2] - u[3]
+    du2 =  x1 + p[1] * u[2]
+    du3 =  p[2] + u[3] * (x1 - p[3])
+    return @SVector [du1, du2, du3]
 end
 \end{lstlisting}
 \end{minipage}
