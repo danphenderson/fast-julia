@@ -4,9 +4,13 @@
 Finish the poster with a single clear narrative: **small, production-grade code changes produce measurable ODE performance improvements in SciML** (Rössler as the case study), supported by a **reproducible benchmark + figure pipeline** and **clean, readable visuals**.
 
 ---
-
 ## 1) Lock scope and narrative (do first)
-- [ ] Freeze to **Case Study 1 only** (Rössler; out-of-place vs in-place vs static; optionally “AD-ready/type-stable” as a production constraint).
+- [x] Intro to Rössler; then illustrate out-of-place vs in-place
+updating in pass-by-reference language.
+- Disscus stack allocated "static/fixed" arrays; display decrease
+in memory allocations. (look at old commits -- this writeup was in
+more detail at one time)
+- Disscuss "in-line" and "in-bounds" functions. Explain these optimizations leverage the llvm compiler framework.
 - [ ] Write/confirm the **performance ladder** variants you will show (6–8 max):
   1) naive out-of-place (allocates)
   2) in-place (alloc-free per RHS call)
@@ -21,7 +25,6 @@ Finish the poster with a single clear narrative: **small, production-grade code 
 
 **Acceptance criteria**
 - Poster claims (e.g., “10×”) match the computed headline number for the chosen experiment.
-
 ---
 
 ## 2) Make the numerical experiment authoritative (single source of truth)
@@ -33,10 +36,26 @@ Finish the poster with a single clear narrative: **small, production-grade code 
   - `tspan`, `dt` (if fixed-step), tolerances (if adaptive), `saveat`/output disabling
   - warmup policy and `BenchmarkTools` setup
 
+## 2.Strech) Add `C` and `Python` Apples-to-Apples RK4 fixed comparisons. (ideally, ``DifferentialEquations.jl`` wins and we emphasize it's bad to roll our own)
+C variants (same algorithm, different compilation / data layout)
+  - C1: baseline: -O3 (no fast-math)
+  - C2: fast-math: -O3 -ffast-math
+  - C3: aggressive (optional): -Ofast -march=native (often implies fast-math; document it explicitly)
+
+Implementation choices inside C:
+  - State layout: double y[3] (stack) vs struct {double x,y,z;} (optional)
+  - Use static inline RHS + restrict pointers to help optimization
+
+Julia variants (match your poster narrative)
+  - J1: naïve out-of-place Vector RHS (allocates each call)
+  - J2: in-place Vector RHS (no per-call alloc)
+  - J3: StaticArrays SVector RHS (stack/register-friendly)
+  - J4: each of the above with @fastmath (separate benchmarks)
+  - (Optional) J5: “production grade” version: @inbounds, @inline, - - preallocated temporaries, no globals
+
+Important: Use a Julia-written RK4 loop for apples-to-apples with C or with python. (Comparing to DifferentialEquations.jl is valuable, but that’s a separate experiment because the algorithm differs unless you force fixed-step RK4.)
 **Acceptance criteria**
 - Running the benchmark script twice yields stable median ordering (minor variance acceptable).
-
----
 
 ## 3) Build a one-command figure pipeline (`./poster/figures/`)
 Create/finish a script (recommended path):
@@ -117,6 +136,7 @@ Replace generic conclusions with actionable takeaways:
   - command to build poster
 - [ ] Limits / next steps (1–2 bullets):
   - e.g., behavior on larger systems; ensemble runs; threading; stiff vs nonstiff; AD/Jacobian pipeline
+- [ ] Possible plug how the compiler is nondeterministic. 
 
 **Acceptance criteria**
 - The conclusion reads like a field guide, not a summary.

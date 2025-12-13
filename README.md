@@ -1,3 +1,8 @@
+![Rössler System Animation](./rossler.gif)
+
+
+
+
 Benchmarks are compared via result object:
 
 ## Benchmark matrix (what variants you will compare)
