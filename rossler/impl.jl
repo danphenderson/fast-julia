@@ -19,11 +19,11 @@ using StaticArrays
 # -------------------------
 # Naive out-of-place solver
 # -------------------------
-function rossler_naive(vx, vp, t)
-    dx1 = -vx[2] - vx[3]
-    dx2 =  vx[1] + vp[1] * vx[2]
-    dx3 =  vp[2] + vx[3] * (vx[1] - vp[3])
-    return [dx1, dx2, dx3]
+function rossler_naive(u, p, t)
+    du1 = -u[2] - u[3]
+    du2 =  u[1] + p[1] * u[2]
+    du3 =  p[2] + u[3] * (u[1] - p[3])
+    return [du1, du2, du3]
 end
 
 """
@@ -48,11 +48,11 @@ end
 # -------------------------
 # In-place solver
 # -------------------------
-function rossler_naive!(dx, vx, vp, t)
-    x1 = vx[1]
-    dx[1] = -vx[2] - vx[3]
-    dx[2] =  x1 + vp[1] * vx[2]
-    dx[3] =  vp[2] + vx[3] * (x1 - vp[3])
+function rossler_naive!(du, u, p, t)
+    x1 = u[1]
+    du[1] = -u[2] - u[3]
+    du[2] =  x1 + p[1] * u[2]
+    du[3] =  p[2] + u[3] * (x1 - p[3])
     return nothing
 end
 """
@@ -77,12 +77,12 @@ end
 # -------------------------
 # Static solver (out-of-place)
 # -------------------------
-function rossler_static_naive(vx, vp, t)
-    x1 = vx[1]
-    dx1 = -vx[2] - vx[3]
-    dx2 =  x1 + vp[1] * vx[2]
-    dx3 =  vp[2] + vx[3] * (x1 - vp[3])
-    return @SVector [dx1, dx2, dx3]
+function rossler_static_naive(u, p, t)
+    x1 = u[1]
+    du1 = -u[2] - u[3]
+    du2 =  x1 + p[1] * u[2]
+    du3 =  p[2] + u[3] * (x1 - p[3])
+    return @SVector [du1, du2, du3]
 end
 
 """
