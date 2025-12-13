@@ -220,12 +220,12 @@ end
 function run_studies()
     rk4_fixed_results        = run_case_study(case_study_benchmark_spec(RK4();  adaptive=false))
     tsit5_adaptive_results   = run_case_study(case_study_benchmark_spec(Tsit5(); adaptive=true))
-    euler_fixed_results      = run_case_study(case_study_benchmark_spec(Euler(); adaptive=false))
+    # euler_fixed_results      = run_case_study(case_study_benchmark_spec(Euler(); adaptive=false))
     midpoint_fixed_results   = run_case_study(case_study_benchmark_spec(Midpoint(); adaptive=false))
     return Dict(
         "RK4 Fixed"        => rk4_fixed_results,
         "Tsit5 Adaptive"   => tsit5_adaptive_results,
-        "Euler Fixed"      => euler_fixed_results,
+        # "Euler Fixed"      => euler_fixed_results,
         "Midpoint Fixed"   => midpoint_fixed_results,
     )
 end
