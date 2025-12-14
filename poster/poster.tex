@@ -55,12 +55,14 @@ yield C-like performance while preserving code clarity.
 
 \noindent
 \td{
-  \vspace{1in}
-
   \textbf{Add Figure:} The Rössler attractor visualized for typical parameters (e.g. $a=0.2$, $b=0.2$, $c=5.7$). The system’s chaotic trajectory in phase space will be integrated with a fixed-step RK4 solver.
   
-  \vspace{1in}
+  \vspace{2in}
 }
+
+\medskip
+\hrulefill
+\medskip
 
 \noindent
 ODE workflows often involve ensembles: many solves across parameters, initial conditions,
@@ -124,17 +126,22 @@ updates and fixed size arrays can eliminate most heap allocations by leveraging 
 \medskip
 
 \noindent
+
+
 %------------------------ Bottom Column Visual  ------------------------
 \td{
-  \vspace{2in}
+  \textbf{Performance Metrics and Tools:} 
+  To benchmark ODE solvers, we measure:\\
+  (1) runtime: wall clock time.\\
+  (2) memorey usage: heap allocations vs. stack allocations.
+  
+  \medskip
 
-  \textbf{Add Results Table.}
+  \textbf{Add Benchmarking Pipeline Figure} The Rössler attractor visualized
+  for typical parameters (e.g. $a=0.2$, $b=0.2$, $c=5.7$).
+  The system’s chaotic trajectory in phase space will be integrated with a fixed-step RK4 solver.
   
-  \textbf{Add Addional Figure -- E.g. Pipeline figure, ODE Solving Mermaid 
-  MindMap.} The Rössler attractor visualized for typical parameters (e.g.
-  $a=0.2$, $b=0.2$, $c=5.7$). The system’s chaotic trajectory in phase space will be integrated with a fixed-step RK4 solver.
-  
-  \vspace{2in}
+  \vspace{4in}
 }
 
 \switchcolumn
