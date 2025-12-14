@@ -28,12 +28,12 @@
 {\Large\textbf{Abstract}}
 {\normalsize
 We compare naïve and optimized Julia implementations for solving
-small to moderate systems of ordinary differential equations (ODEs),
-$\vx'(t) = \vf(\vx, t)$ with $\dim(\vx) \leq 10^2$.
-We demonstrate how a sequence of targeted changes—in-place updates, type stability and
-solver selection—can yield order-of-magnitude speedups while preserving code clarity and
-reproducibility.  By applying these techniques we achieve a tenfold speedup over the original
-code and demonstrate how to scale up to larger systems.}
+small to moderate systems of (ODEs), $\vx'(t) = \vf(\vx, t)$ with
+$\dim(\vx) \leq 10^2$. We demonstrate how to asses and resolve performance 
+bottlenecks using the Rössler system as a case study. Numerical Experiments
+show that a sequence of targeted changes—in-place updates, type stability—can
+yield C-like performance while preserving code clarity.
+\red{\textbf{<Closing statement describing the basis of our claim; add a key result here.>}}}
 \end{minipage}
 }
 
