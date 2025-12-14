@@ -85,11 +85,13 @@ The Rössler ODE system is defined as
     \vp = (a, \, b, \, c)^\top \text{ (parameters)} 
   \end{cases*}, &&
 \end{flalign*}
-where cononical paramters are $a=0.2$, $b=0.2$, $c=5.7$.
+
+\noindent
+where canonical parameters are $a=0.2$, $b=0.2$, $c=5.7$.
 The \ref{eq:rossler} system is non-stiff and exhibits chaotic dynamics, making it suitable
 benchmark problem for ODE solvers. Numerical integration is done with the classical 4th-order Runge-Kutta (RK4) method - an explicit
 solver with $4$-stages, leading to 4 evaluations of $\vf$ at each fixed step. We seek $\vx(t)$ for $t \in [0, T]$ subject
-to IC $\vx_0=(1, 1, 1)$ and paramters $\vp=(0.1, 0.1, 15.7)$.
+to IC $\vx_0=(1, 1, 1)$ and parameters $\vp=(0.1, 0.1, 15.7)$.
 
 \medskip
 
@@ -103,7 +105,6 @@ julia ODE model code goes here}
 
 \medskip
 
-\noindent
 \subsection*{Computational Cost:} RK4 advances $\vx_n \approx \vx(t_n) \text{ via } \vx_{n+1} = \vx_n + \frac{h}{6} (k_1 + 2k_2 + 2k_3 + k_4)$.
 The variable cost at stages $k_1,\ldots,k_4$ is evaluating $\vf$ at intermediate points;
 which depend on the previous stage. Thus, the total flop count for final simulation time $T$ and step size $h$
@@ -113,7 +114,6 @@ and the CPU scales linearly. The linear scaling of RK4 is a key expectation veri
 
 \medskip
 
-\noindent
 \subsection*{Heap vs. Stack Allocation:} Heap vs. Stack Allocation: In Julia (and low-level languages like C),
 data can often be allocated on the stack instead of the heap. Stack allocation is fast and has essentially no
 overhead for creation or cleanup – memory is managed by the function call stack and automatically reclaimed 
@@ -124,8 +124,6 @@ updates and fixed size arrays can eliminate most heap allocations by leveraging 
 Measuring a program's stack allocation requires third party external tools.}
 
 \medskip
-
-\noindent
 
 %------------------------ Bottom Column Visual  ------------------------
 \td{
@@ -158,22 +156,28 @@ of the \eqref{eq:rossler} system, together with a type-stable fixed/static-size 
   \item optimized in-place code eliminates per-call allocations for \texttt{Vector}-based states; and
   \item a \texttt{StaticArrays.jl}/\texttt{SVector} implementation enables stack allocation, often fastest for very small systems.
 \end{itemize}
-\textbf{Performance ladder highlights.}
-  \begin{itemize}
-    \item \texttt{StaticArrays} keep the three-state RHS on the stack, reducing heap pressure and GC noise.
-    \item Fixed-size math improves cache locality and throughput for tight ODE kernels.
-    \item \texttt{@inbounds} removes bounds checks once dimensions are known at compile time.
-    \item \texttt{@inline} encourages the compiler to fuse the RHS into the solver loop, trimming call overhead.
-    \item Fewer checks and calls leave the CPU focused on arithmetic in the hot loop.
-  \end{itemize}
-  We optimize each implementation using macros \texttt{\@inbounds}, \texttt{\@inline}, and we see
-  the lowered code to understand the impact of these changes.
+
+\medskip
+
+\noindent\textbf{Performance ladder highlights.}
+\begin{itemize}
+  \item \texttt{StaticArrays} keep the three-state RHS on the stack, reducing heap pressure and GC noise.
+  \item Fixed-size math improves cache locality and throughput for tight ODE kernels.
+  \item \texttt{@inbounds} removes bounds checks once dimensions are known at compile time.
+  \item \texttt{@inline} encourages the compiler to fuse the RHS into the solver loop, trimming call overhead.
+  \item Fewer checks and calls leave the CPU focused on arithmetic in the hot loop.
+\end{itemize}
+
+\medskip
+
+\noindent
+We optimize each implementation using macros \texttt{\@inbounds}, \texttt{\@inline}, and we see
+the lowered code to understand the impact of these changes.
 
 \medskip
 \hrulefill
 \medskip
 
-\noindent
 \subsection*{Results and Analysis}
 
 % --- Figures: speedup plot ---
@@ -217,7 +221,6 @@ of the \eqref{eq:rossler} system, together with a type-stable fixed/static-size 
 %----------------------------------------------------------------------------------------
 
 % ---- TODO WHAT GOES HERE? --- Conclusion comes last
-å
 
 %------------------------ Conclusion ------------------------
 \section*{\textbf{WIP} Conclusion: Optimizing ODEs in Julia}

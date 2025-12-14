@@ -1,4 +1,4 @@
-# rossler/experiment1.jl
+# rossler/benchmark.jl
 include(joinpath(@__DIR__, "impl.jl"))
 
 using DifferentialEquations

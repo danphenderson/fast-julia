@@ -1,6 +1,30 @@
-![Rössler System Animation](./rossler.gif) 
+![Rössler System Animation](./rossler.gif)
 
+*Figure 1 — Performance ladder for Rössler RHS variants (L0–L5).*
+```mermaid
+flowchart TB
+  %% Performance / “production-grade” ladder for Rössler RHS variants (increasing maturity/perf left→right)
 
+  A["L0: Baseline (naïve, out-of-place)<br/>rossler_naive(u,p,t)<br/>• allocates new Vector each call<br/>• bounds checks<br/>• simplest reference"]
+    --> B["L1: Bounds-check-free (out-of-place)<br/>rossler(u,p,t)<br/>• still allocates Vector<br/>• @inbounds / @inline<br/>• faster RHS, same API"]
+    --> C["L2: Allocation-free (in-place)<br/>rossler!(du,u,p,t)<br/>• no per-call heap allocation<br/>• preallocated du<br/>• standard SciML performance step"]
+    --> D["L3: Concrete eltype (type-stable OOP)<br/>rossler_type_stable(u,p,t)<br/>• allocates, but concrete eltype<br/>• robust under mixed types / AD<br/>• better compiler specialization"]
+    --> E["L4: Stack-resident tiny system (StaticArrays)<br/>rossler_static(u::SVector,p,t)<br/>• allocation-free<br/>• SVector in/out<br/>• best for very small state (3D)"]
+    --> F["L5: AD-ready + stack-resident<br/>rossler_ad(u::SVector,p::SVector,t)<br/>• allocation-free<br/>• explicit promote_type<br/>• forward-mode AD friendly"]
+
+  %% Side notes
+  B -.-> N1["Note: Out-of-place variants allocate by construction<br/>(useful for clarity / correctness baselines)"]
+  C -.-> N2["Note: In-place is the typical “production” RHS<br/>(minimizes GC pressure)"]
+  E -.-> N3["Note: StaticArrays often wins for tiny systems<br/>(stack/register temporaries; low overhead)"] --> 
+  F["L5: AD-ready + stack-resident\nrossler_ad(u::SVector,p::SVector,t)\n• allocation-free\n• explicit promote_type\n• forward-mode AD friendly"]
+
+  %% Optional side notes for the story
+  B --- N1["Note: Out-of-place variants allocate by construction\n(useful for clarity / correctness baselines)"]
+  C --- N2["Note: In-place is the typical 'production' RHS\n(minimizes GC pressure)"]
+  E --- N3["Note: StaticArrays often wins for very small systems\n(less overhead, stack/register temporaries)"]
+```
+
+*Figure 2 — Mindmap of a practical small-ODE workflow (spec → method → validation → reporting).*
 ```mermaid
 mindmap
   root(Solving Small System of ODEs)
@@ -91,7 +115,50 @@ mindmap
     `"]
 ```
 
+## Experiment Specification
 
+*Figure 3 — Benchmark pipeline used in Experiment 1 (warmup → RHS microbench → solve sweep).*
+```mermaid
+flowchart TB
+  %% Matches run_experiment1(): warmup compile, RHS microbench once/variant, solve bench per (variant, dt)
+
+  S0["Experiment1Spec<br/>u0=[1,1,1], p=[0.1,0.1,14], tspan=(0,200)<br/>dt0=1e-2, halvings=6, warmup_steps=10"]
+    --> S1["dt_schedule(dt0, halvings)<br/>dts = [dt0, dt0/2, dt0/4, ...]"]
+
+  S1 --> S2["build_systems_for_experiment1(spec)<br/>Vector u0 for vector variants<br/>SVector u0 for static variants<br/>Optional rossler_ad if defined"]
+
+  S2 --> W["Warm-up compilation<br/>tw=(t0, t0 + warmup_steps*dts[1])<br/>solve_fixed_rk4(prob_warm, dts[1])"]
+
+  W --> R["RHS microbenchmark (dt-independent)<br/>bench_rhs(sys)<br/>• in-place: alloc du=similar(u)<br/>• out-of-place: call f(u,p,t)<br/>@benchmark ... samples=200 evals=1"]
+
+  W --> P["Full solve benchmarks (dt sweep)<br/>prob = make_prob(sys) on full tspan<br/>for dt in dts: bench_solve(prob; dt)<br/>@benchmark ... samples=20 seconds=1 evals=1"]
+
+  P --> K["RK4 fixed-step solve wrapper<br/>solve(prob, RK4(); dt=dt, ode_benchmark_solve_kwargs()...)<br/>minimal saving, dense=false, maxiters=1e12"]
+```
+
+*Figure 4 — RHS variant families and signatures used by the benchmark driver (Vector vs StaticArrays).*
+```mermaid
+flowchart LR
+  %% Matches build_systems_for_experiment1() variant list and impl.jl signatures.
+
+  subgraph V["Vector-based state (u::AbstractVector, p::AbstractVector)"]
+    A["L0: OOP baseline (alloc + bounds)<br/>rossler_naive(u,p,t)<br/>returns Vector"] 
+      --> B["L1: OOP + @inbounds/@inline (alloc)<br/>rossler(u,p,t)<br/>returns Vector"] 
+    B --> C0["L2a: In-place baseline (no heap alloc; may have bounds)<br/>rossler_naive!(du,u,p,t)<br/>writes du"] 
+      --> C1["L2b: In-place + @inbounds/@inline (no heap alloc)<br/>rossler!(du,u,p,t)<br/>writes du"]
+    B --> D["L3: OOP type-stable (alloc, promoted eltype)<br/>rossler_type_stable(u,p,t)<br/>returns Vector{promote_type(Tu,Tp)}"]
+  end
+
+  subgraph S["Static state (u::SVector{3}, params vary by variant)"]
+    E0["L4a: Static baseline (SVector output)<br/>rossler_static_naive(u,p,t)<br/>returns @SVector [...]"]
+      --> E1["L4b: Static + @inbounds/@inline (allocation-free)<br/>rossler_static(u::SVector{3}, p, t)<br/>returns SVector{3,T}"]
+    E1 --> F["L5: AD-ready static (allocation-free)<br/>rossler_ad(u::SVector{3}, p::SVector{3}, t)<br/>returns SVector{3,promote_type(Tu,Tp)}"]
+  end
+
+  %% Relationship between families
+  B -.-> E1["Switch u0 to SVector in Experiment 1"]
+  F -.-> N["Included only if rossler_ad is defined (conditional add)"]
+```
 # TODO.md
 
 ## Goal

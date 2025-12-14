@@ -1,3 +1,5 @@
+# rossler/impl.jl
+
 # Rössler system implementations with explicit in-bounds checks.
 # This file defines multiple variants of the Rössler right‑hand side.
 # - `rossler`: naive out-of-place implementation returning a new `Vector`.
