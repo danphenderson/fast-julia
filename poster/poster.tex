@@ -96,8 +96,16 @@ of the Rössler system \eqref{eq:rossler}, together with a type-stable fixed/sta
   \item optimized in-place code eliminates per-call allocations for \texttt{Vector}-based states; and
   \item a \texttt{StaticArrays.jl}/\texttt{SVector} implementation enables stack allocation, often fastest for very small systems.
 \end{itemize}
-We optimize each implementation using macros \texttt{\@inbounds}, \texttt{\@inline}, and we see
-the lowered code to understand the impact of these changes.
+  \textbf{Performance ladder highlights.}
+  \begin{itemize}
+    \item \texttt{StaticArrays} keep the three-state RHS on the stack, reducing heap pressure and GC noise.
+    \item Fixed-size math improves cache locality and throughput for tight ODE kernels.
+    \item \texttt{@inbounds} removes bounds checks once dimensions are known at compile time.
+    \item \texttt{@inline} encourages the compiler to fuse the RHS into the solver loop, trimming call overhead.
+    \item Fewer checks and calls leave the CPU focused on arithmetic in the hot loop.
+  \end{itemize}
+  We optimize each implementation using macros \texttt{\@inbounds}, \texttt{\@inline}, and we see
+  the lowered code to understand the impact of these changes.
 
 \medskip
 
