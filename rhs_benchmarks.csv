@@ -1,0 +1,9 @@
+RHS,Benchmark
+rossler_static,Trial(0.001 ns)
+rossler_type_stable,Trial(0.001 ns)
+rossler,Trial(0.001 ns)
+rossler_naive!,Trial(0.001 ns)
+rossler_naive,Trial(0.001 ns)
+rossler!,Trial(0.001 ns)
+rossler_static_naive,Trial(0.001 ns)
+rossler_ad,Trial(0.001 ns)

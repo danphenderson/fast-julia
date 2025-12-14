@@ -26,93 +26,29 @@ flowchart TB
 
 *Figure 2 — Mindmap of a practical small-ODE workflow (spec → method → validation → reporting).*
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#3ec0c5', 'primaryBorderColor': '#0a1d1eff', 'primaryTextColor': '#0f2f30', 'lineColor': '#0f2f30', 'fontFamily': 'Helvetica Neue, Arial, sans-serif'}} }%%
 mindmap
-  root(Solving Small System of ODEs)
-    IVP Specification
-      \newlines["`State & parameters
-        dimension n
-        parameters p
-        units/scales -->
-      `"]
-      \newlines["`Time domain
-        t0, tf
-        output times (saveat)`"]
-      \newlines["`IC x0 (and x0' if DAE)`"]
-      \newlines["`Model properties
-        smoothness of f
-        invariants/constraints (mass, positivity)
-        events/discontinuities`"]
-    Well-posedness checks
-      \newlines["`Existence & uniqueness (Picard–Lindelöf)
-        f locally Lipschitz in x
-      `"]
-      \newlines["`Domain validity
-        singularities / blow-up
-        parameter ranges
-      `"]
-      \newlines["`Scaling / nondimensionalization
-        reduce condition issues
-        balance magnitudes
-      `"]
-    Numerical method selection
-      \newlines["`Stiffness?
-        nonstiff: explicit RK (e.g., RK4 / Tsit5)
-        mildly stiff: stabilized explicit / IMEX
-        stiff: implicit (BDF, Rosenbrock, Radau)
-      `"]
-      \newlines["`Accuracy target
-        low/medium: fixed step
-        high: adaptive step + error control
-      `"]
-      \newlines["`Structure to exploit
-        Hamiltonian / symplectic: symplectic integrator
-        oscillatory: methods tuned for oscillations
-        large sparse: Jacobian sparsity + Krylov
-      `"]
-          \newlines["`Discretization details
-      Step size / tolerance
-        dt (fixed) OR reltol/abstol (adaptive)
-        maxiters, dtmin/dtmax
-      Error estimation
-        embedded pair
-        local truncation error
-      Jacobian handling (implicit)
-        analytic vs AD vs finite diff
-        factorization / preconditioner
-    `"]   
-    \newlines["`Implementation pipeline
-      Define f(t,x,p)
-        allocate-free / in-place
-        type stability
-      Choose solver + options
-        saveat / dense output
-        callbacks (events)
-      Run solve
-        check return code
-    `"]   
-    \newlines["`Validation & verification
-      Sanity checks
-        conservation / invariants
-        positivity / bounds
-      Convergence
-        refine dt or tighten tolerances
-        compare against reference solution
-      Sensitivity
-        vary parameters p
-        check qualitative stability
-    `"]   
-    \newlines["`Diagnostics & reporting
-      Plots
-        components vs t
-        phase portraits
-        norms / energy
-      Performance
-        allocations / profiling
-        stiffness indicators
-      Reproducibility
-        fixed seeds (if noise)
-        record solver/tols/version
-    `"]
+  root((Fast Julia: Small ODE Workflow))
+    IVP setup
+      "State and parameters: small n, scaled units"
+      "Time window: t0 → tf, saveat grid"
+      "Model checks: smooth f, invariants, events"
+    Method choice
+      "Stiffness guide: explicit RK4 / stabilized / BDF"
+      "Accuracy target: fixed step vs adaptive tolerances"
+      "Structure to exploit: symplectic flows, sparsity, Jacobian plan"
+    Implementation
+      "Allocate-free RHS: in-place `f!(du,u,p,t)`"
+      "Type-stable inputs; promote eltypes"
+      "Tiny systems: `StaticArrays` to stay on the stack"
+    Validation
+      "Sanity: bounds, invariants, positivity"
+      "Convergence: refine dt or tolerances"
+      "Sensitivity: sweep parameters, watch qualitative stability"
+    Reporting
+      "Plots: components, phase portrait, norms"
+      "Performance: runtime plus allocations/GC"
+      "Reproducibility: solver/tols, seeds, versions"
 ```
 
 ## Experiment Specification
