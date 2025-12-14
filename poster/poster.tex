@@ -42,15 +42,18 @@ yield C-like performance while preserving code clarity.
 \vspace{0.20cm}
 
 %----------------------------------------------------------------------------------------
-% BODY (3 COLUMNS)
+% BEGIN: BODY (3 COLUMNS)
 %----------------------------------------------------------------------------------------
 \begin{paracol}{3}
   \setcolumnwidth{0.28\textwidth,0.44\textwidth,0.28\textwidth}
 
-% BEGIN: Left Column
+%----------------------------------------------------------------------------------------
+% BEGIN: LEFT COLUMN
 %----------------------------------------------------------------------------------------
 %------------------------ INTRODUCTION ------------------------
 \section*{Introduction}
+
+\noindent
 \td{
   \vspace{1in}
 
@@ -105,7 +108,7 @@ The variable cost at stages $k_1,\ldots,k_4$ is evaluating $\vf$ at intermediate
 which depend on the previous stage. Thus, the total flop count for final simulation time $T$ and step size $h$
 is $O(N)$, where $N=T/h$ is the total number of steps. Therefore, halving the step size (thereby doubling $N$)
 doubles the number of flops and should approximately double runtime, assuming overhead remains negligible
-and the CPU scales linearly. The linear scaling of RK4 is a key expectation we will verify in our benchmarks.
+and the CPU scales linearly. The linear scaling of RK4 is a key expectation verified in our benchmarks.
 
 \medskip
 
@@ -117,10 +120,10 @@ when out of scope. Our benchmarks will illustrate how different coding patterns 
 whether memory is allocated on the heap or kept on the stack. In particular, we will see how using in-place
 updates and fixed size arrays can eliminate most heap allocations by leveraging stack storage.
 \footnote{``Stack allocation`` herein refers to any memory allocation that doesn't occur at runtime}
-\medskip
-\hrulefill
+
 \medskip
 
+\noindent
 %------------------------ Bottom Column Visual  ------------------------
 \td{
   \vspace{2in}
@@ -135,29 +138,21 @@ updates and fixed size arrays can eliminate most heap allocations by leveraging 
 }
 
 \switchcolumn
-% END: Left Column
+
 %----------------------------------------------------------------------------------------
-
-\medskip
-
-\noindent
-
-\medskip
+% BEGIN: MIDDLE COLUMN
+%----------------------------------------------------------------------------------------
+\section*{Case Study: Optimizing the Rössler ODE System}
 
 \noindent
-
-
-\medskip
-
-\noindent
-\textbf{Case Study.}  We compare out-of-place and in-place Julia implementations
-of the Rössler system \eqref{eq:rossler}, together with a type-stable fixed/static-size variant:
+We compare out-of-place and in-place Julia implementations
+of the \eqref{eq:rossler} system, together with a type-stable fixed/static-size variant:
 \begin{itemize}
   \item naïve out-of-place code allocates a new array at each right-hand-side call, triggering garbage collection;
   \item optimized in-place code eliminates per-call allocations for \texttt{Vector}-based states; and
   \item a \texttt{StaticArrays.jl}/\texttt{SVector} implementation enables stack allocation, often fastest for very small systems.
 \end{itemize}
-  \textbf{Performance ladder highlights.}
+\textbf{Performance ladder highlights.}
   \begin{itemize}
     \item \texttt{StaticArrays} keep the three-state RHS on the stack, reducing heap pressure and GC noise.
     \item Fixed-size math improves cache locality and throughput for tight ODE kernels.
@@ -169,73 +164,8 @@ of the Rössler system \eqref{eq:rossler}, together with a type-stable fixed/sta
   the lowered code to understand the impact of these changes.
 
 \medskip
-
-\medskip
 \hrulefill
 \medskip
-
-% --- Figure: Pipeline Overview (TikZ) ---
-\medskip
-
-\section*{Case Study: Optimizing the Rössler ODE System}
-
-\noindent
-\begin{minipage}{\linewidth}
-\centering
-\begin{minipage}[t]{0.475\linewidth} % Left: out-of-place
-\begin{lstlisting}[
-  language=Julia,
-  linewidth=\linewidth,
-  breaklines=true,
-  caption={Out-of-place RHS using the SciML interface `f(u,p,t)` (returns a fresh array).},
-  label={lst:naive-out-of-place}
-]
-function rossler(u, p, t)
-    du1 = -u[2] - u[3]
-    du2 =  u[1] + p[1] * u[2]
-    du3 =  p[2] + u[3] * (u[1] - p[3])
-    return [du1, du2, du3]
-end
-\end{lstlisting}
-\td{\small \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
-  reports 240 bytes per call (typical).}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.475\linewidth} % Right: in-place
-\begin{lstlisting}[
-  language=Julia,
-  linewidth=\linewidth,
-  breaklines=true,
-  caption={In-place RHS using the SciML signature `f!(du,u,p,t)`.  Avoids per-call allocations and is typically fastest for `Vector`-based states.},
-  label={lst:in-place}
-]
-function rossler!(du, u, p, t)
-    x1 = u[1]
-    du[1] = -u[2] - u[3]
-    du[2] =  x1 + p[1] * u[2]
-    du[3] =  p[2] + u[3] * (x1 - p[3])
-    return nothing
-end
-\end{lstlisting}
-\end{minipage}
-\vspace{0.75em}
-\begin{lstlisting}[
-  language=Julia,
-  linewidth=\linewidth,
-  breaklines=true,
-  caption={Fixed-size, stack-allocated version using \texttt{StaticArrays}.},
-  label={lst:static}
-]
-function rossler_static(u, p, t)
-    x1 = u[1]
-    du1 = -u[2] - u[3]
-    du2 =  x1 + p[1] * u[2]
-    du3 =  p[2] + u[3] * (x1 - p[3])
-    return @SVector [du1, du2, du3]
-end
-\end{lstlisting}
-\end{minipage}
-
 
 % ------------------------ Middle Column ------------------------
 
