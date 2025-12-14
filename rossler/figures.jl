@@ -48,8 +48,6 @@ function preferred_variant_order(df::DataFrame)
         "rossler!",
         "rossler_static_naive",
         "rossler_static",
-        "rossler_type_stable",
-        "rossler_ad",
     ]
     present = Set(String.(df.variant))
     ordered = String[]
@@ -129,19 +127,19 @@ function plot_solver_speedup(
 )
     d = subset(df; solver=solver, metric=metric)
 
-    base_rows = d[d.variant .== baseline, :]
+    base_rows = d[d.variant .== "rossler_naive", :]
     if nrow(base_rows) == 0
-        baseline = String(first(d.variant))
         base_rows = d[d.variant .== baseline, :]
     end
-    base = base_rows.time_ms[1]
+    nrow(base_rows) == 0 && error("Baseline variant $(baseline) missing for solver $(solver)")
+    base = base_rows.median_time_ns[1]
 
     speedup = Float64[]
     labels = String[]
     for v in variants
         rows = d[d.variant .== v, :]
         nrow(rows) == 0 && continue
-        push!(speedup, base / rows.time_ms[1])
+        push!(speedup, base / rows.median_time_ns[1])
         push!(labels, pretty_variant(v))
     end
 
@@ -149,7 +147,7 @@ function plot_solver_speedup(
         reverse(labels),
         reverse(speedup);
         orientation = :h,
-        xlabel = "speedup vs $(pretty_variant(String(baseline))) (×)",
+        xlabel = "speedup vs naïve baseline (rossler_naive) (×)",
         ylabel = "",
         title = "$(solver): speedup (metric = $(String(metric)))",
         legend = false,
@@ -223,11 +221,10 @@ function make_all_figures(
     df::DataFrame;
     outdir::AbstractString = "./poster/figures",
     baseline::AbstractString = "rossler_naive",
+    variants::Vector{String} = preferred_variant_order(df),
 )
     normalize_schema!(df)
     mkpath(outdir)
-
-    variants = preferred_variant_order(df)
     solvers = sort(unique(String.(df.solver)))
 
     for solver in solvers
