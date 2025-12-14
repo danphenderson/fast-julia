@@ -101,10 +101,22 @@ julia ODE model code goes here}
 
 \noindent
 \subsection*{Computational Cost:} RK4 advances $\vx_n \approx \vx(t_n) \text{ via } \vx_{n+1} = \vx_n + \frac{h}{6} (k_1 + 2k_2 + 2k_3 + k_4)$.
-The primary cost at each stage, $k_1,\ldots,k_4$, $\vf$ is evaluating $\vf$ at an intermediate point;
-dependent on the previous stage. For a total simulation time $T$ and step size $h$, the number of steps
-is $N=T/h$. So, the tolal floating-point
+The variable cost at stages $k_1,\ldots,k_4$ is evaluating $\vf$ at intermediate points;
+which depend on the previous stage. Thus, the total flop count for final simulation time $T$ and step size $h$
+is $O(N)$, where $N=T/h$ is the total number of steps. Therefore, halving the step size (thereby doubling $N$)
+doubles the number of flops and should approximately double runtime, assuming overhead remains negligible
+and the CPU scales linearly. The linear scaling of RK4 is a key expectation we will verify in our benchmarks.
 
+\medskip
+
+\noindent
+\subsection*{Heap vs. Stack Allocation:} Heap vs. Stack Allocation: In Julia (and low-level languages like C),
+data can often be allocated on the stack instead of the heap. Stack allocation is fast and has essentially no
+overhead for creation or cleanup – memory is managed by the function call stack and automatically reclaimed 
+when out of scope. Our benchmarks will illustrate how different coding patterns for the Rössler ODE affect 
+whether memory is allocated on the heap or kept on the stack. In particular, we will see how using in-place
+updates and fixed size arrays can eliminate most heap allocations by leveraging stack storage.
+\footnote{``Stack allocation`` herein refers to any memory allocation that doesn't occur at runtime}
 \medskip
 \hrulefill
 \medskip
