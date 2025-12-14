@@ -50,7 +50,6 @@ yield C-like performance while preserving code clarity.
 %----------------------------------------------------------------------------------------
 % BEGIN: LEFT COLUMN
 %----------------------------------------------------------------------------------------
-%------------------------ INTRODUCTION ------------------------
 \section*{Introduction}
 
 \noindent
@@ -128,7 +127,6 @@ Measuring a program's stack allocation requires third party external tools.}
 
 \noindent
 
-
 %------------------------ Bottom Column Visual  ------------------------
 \td{
   \textbf{Performance Metrics and Tools:} 
@@ -175,9 +173,6 @@ of the \eqref{eq:rossler} system, together with a type-stable fixed/static-size 
 \hrulefill
 \medskip
 
-% ------------------------ Middle Column ------------------------
-
-
 \noindent
 \subsection*{Results and Analysis}
 
@@ -216,13 +211,16 @@ of the \eqref{eq:rossler} system, together with a type-stable fixed/static-size 
 \hrulefill
 \medskip
 
-% --- END MIDDLE COLUMN
 \switchcolumn
+%----------------------------------------------------------------------------------------
+% BEGIN: THIRD COLUMN
+%----------------------------------------------------------------------------------------
 
 % ---- TODO WHAT GOES HERE? --- Conclusion comes last
-%------------------------ Conclusion ------------------------
-\section*{Conclusion: Optimizing ODEs in Julia}
 
+%------------------------ Conclusion ------------------------
+\section*{\textbf{WIP} Conclusion: Optimizing ODEs in Julia}
+\td{
 \noindent
 Symbolic computation can automate derivations and optimizations that would otherwise
 be performed manually, improving both performance and reliability.  For example, the 
@@ -235,7 +233,7 @@ optimized code for the resulting system.
 \noindent
 By carefully crafting our Julia implementation—using in-place updates, 
 static arrays and solver-aware techniques—we achieved C-like performance 
-without sacrificing code clarity.  Eliminating unnecessary allocations and 
+without sacrificing code clarity. Eliminating unnecessary allocations and 
 choosing the right data layout allow simulation code to scale up to large problems,
 be reused in future research and be shared confidently with the community.
 
@@ -246,7 +244,7 @@ Choosing the right integrator is crucial: an explicit scheme is sufficient for
 the non-stiff Rössler system, but implicit methods are necessary for stiff problems.
 The SciML ecosystem provides a rich set of tools for selecting and tuning the best 
 solver for your problem; don’t guess—measure with \texttt{BenchmarkTools.jl}!
-
+}
 \medskip
 
 \noindent
