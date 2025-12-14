@@ -121,7 +121,8 @@ overhead for creation or cleanup – memory is managed by the function call stac
 when out of scope. Our benchmarks will illustrate how different coding patterns for the Rössler ODE affect 
 whether memory is allocated on the heap or kept on the stack. In particular, we will see how using in-place
 updates and fixed size arrays can eliminate most heap allocations by leveraging stack storage.
-\footnote{``Stack allocation`` herein refers to any memory allocation that doesn't occur at runtime}
+\footnote{``Stack allocation`` herein refers to any memory allocation that doesn't occur at runtime.
+Measuring a program's stack allocation requires third party external tools.}
 
 \medskip
 
@@ -133,7 +134,7 @@ updates and fixed size arrays can eliminate most heap allocations by leveraging 
   \textbf{Performance Metrics and Tools:} 
   To benchmark ODE solvers, we measure:\\
   (1) runtime: wall clock time.\\
-  (2) memorey usage: heap allocations vs. stack allocations.
+  (2) memory usage: heap allocations (allocation free => program uses stack memory)
   
   \medskip
 
