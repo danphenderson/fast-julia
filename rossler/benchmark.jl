@@ -1,132 +1,57 @@
-# rossler/benchmark.jl
-"""Module includes rossler implementations (`rossler/impl.jl`)
-and related utilities, and herein, the ODE benchmarking pipeline is implemented.
-(satisfing the SciML ODESystem interface)
-"""
-
+# rossler/experiment1.jl
 include(joinpath(@__DIR__, "impl.jl"))
 
 using DifferentialEquations
 using BenchmarkTools
 using StaticArrays
 
-# ===========================================================================
-# BEGIN defining types
-# ===========================================================================
-Base.@kwdef mutable struct ODESys{I,F,U0,P,A}
+# =============================================================================
+# Experiment 1: RK4 fixed-step, varying RHS implementations, dt-halving sweep
+# =============================================================================
+@inline ode_benchmark_solve_kwargs() = (;
+    adaptive=false,
+    save_start=false,
+    save_end=false,
+    save_everystep=false,
+    save_on=false,
+    dense=false,
+    alias_u0=false,
+    timeseries_errors=false,
+    maxiters=Int(1e12),
+)
+
+# Disallow any other construction (positional and/or keyword arguments).
+ODEBenchmarkSolve(args...; kwargs...) =
+    throw(ArgumentError("ODEBenchmarkSolve() has fixed defaults; arguments are not supported."))
+
+
+Base.@kwdef mutable struct ODESys{I,F,U0,P}
+    name::String
     f::F
     u0::U0
     p::P
     tspan::Tuple{Float64,Float64}
-    alg::A = Tsit5()
-    dt::Float64 = 0.01
-end
-
-function ODESys{I}(; f, u0, p, tspan, alg=Tsit5(), dt=0.01) where {I}
-    return ODESys{I, typeof(f), typeof(u0), typeof(p), typeof(alg)}(f, u0, p, tspan, alg, dt)
 end
 
 @inline isinplace(::ODESys{I}) where {I} = I
 
-ode_system(f, u0, p, tspan; inplace::Bool=false, alg=Tsit5(), dt=0.01) =
-    ODESys{inplace}(; f, u0, p, tspan, alg, dt)
-
-@inline make_prob(sys::ODESys{I}) where {I} =
-    ODEProblem{I}(sys.f, sys.u0, sys.tspan, sys.p)
-
-Base.@kwdef struct ODESolveParams{A}
-    alg::A = Tsit5()
-
-    adaptive::Bool = false
-    dt::Union{Nothing,Float64} = nothing  # if nothing, use sys.dt
-
-    # adaptive-only
-    reltol::Float64 = 1e-3
-    abstol::Float64 = 1e-6
-
-    # output control
-    saveat::Union{Nothing,Float64,AbstractVector{Float64}} = nothing
-    save_start::Bool = true
-    save_end::Bool = true
-    save_everystep::Bool = false
-    save_on::Bool = true
-    dense::Bool = true
-
-    # keep these for extensibility; solve_system_fast passes them through
-    alias_u0::Bool = false
-    timeseries_errors::Bool = false
+function ode_system(name::AbstractString, f, u0, p, tspan; inplace::Bool=false)
+    return ODESys{inplace, typeof(f), typeof(u0), typeof(p)}(
+        name=String(name),
+        f=f,
+        u0=u0,
+        p=p,
+        tspan=tspan,
+    )
 end
 
-################################################################################
-# Fast-path solve without dynamic NamedTuple merging
-################################################################################
-function solve_system_fast(sys::ODESys, sp::ODESolveParams)
-    prob = make_prob(sys)
-    dt = sp.dt === nothing ? sys.dt : sp.dt
+@inline make_prob(sys::ODESys{I}; tspan::Tuple{Float64,Float64}=sys.tspan) where {I} =
+    ODEProblem{I}(sys.f, sys.u0, tspan, sys.p)
 
-    if sp.adaptive
-        if sp.saveat === nothing
-            return solve(prob, sp.alg;
-                adaptive=true,
-                reltol=sp.reltol,
-                abstol=sp.abstol,
-                save_start=sp.save_start,
-                save_end=sp.save_end,
-                save_everystep=sp.save_everystep,
-                save_on=sp.save_on,
-                dense=sp.dense,
-                alias_u0=sp.alias_u0,
-                timeseries_errors=sp.timeseries_errors,
-            )
-        else
-            return solve(prob, sp.alg;
-                adaptive=true,
-                reltol=sp.reltol,
-                abstol=sp.abstol,
-                saveat=sp.saveat,
-                save_start=sp.save_start,
-                save_end=sp.save_end,
-                save_everystep=sp.save_everystep,
-                save_on=sp.save_on,
-                dense=sp.dense,
-                alias_u0=sp.alias_u0,
-                timeseries_errors=sp.timeseries_errors,
-            )
-        end
-    else
-        if sp.saveat === nothing
-            return solve(prob, sp.alg;
-                adaptive=false,
-                dt=dt,
-                save_start=sp.save_start,
-                save_end=sp.save_end,
-                save_everystep=sp.save_everystep,
-                save_on=sp.save_on,
-                dense=sp.dense,
-                alias_u0=sp.alias_u0,
-                timeseries_errors=sp.timeseries_errors,
-            )
-        else
-            return solve(prob, sp.alg;
-                adaptive=false,
-                dt=dt,
-                saveat=sp.saveat,
-                save_start=sp.save_start,
-                save_end=sp.save_end,
-                save_everystep=sp.save_everystep,
-                save_on=sp.save_on,
-                dense=sp.dense,
-                alias_u0=sp.alias_u0,
-                timeseries_errors=sp.timeseries_errors,
-            )
-        end
-    end
-end
-
-################################################################################
-# Benchmark helpers (used by run_case_study/run_studies)
-################################################################################
-function bench_rhs(sys::ODESys; samples::Int=100, evals::Int=1)
+# -----------------------------
+# Benchmark helpers
+# -----------------------------
+function bench_rhs(sys::ODESys; samples::Int=200, evals::Int=1)
     f = sys.f
     u = sys.u0
     p = sys.p
@@ -142,90 +67,114 @@ function bench_rhs(sys::ODESys; samples::Int=100, evals::Int=1)
     end
 end
 
-function bench_solve(sys::ODESys, sp::ODESolveParams; samples::Int=10, seconds=1.0)
-    solve_system_fast(sys, sp) # warm-up
-    return @benchmark solve_system_fast($sys, $sp) samples=samples seconds=seconds evals=1
+@inline solve_fixed_rk4(prob, dt::Float64) =
+    solve(prob, RK4(); dt=dt, ode_benchmark_solve_kwargs()...)
+
+function bench_solve(prob; dt::Float64, samples::Int=20, seconds::Float64=1.0)
+    return @benchmark solve_fixed_rk4($prob, $dt) samples=samples seconds=seconds evals=1
 end
 
-################################################################################
-# Case study runner (what run_studies() uses)
-################################################################################
-Base.@kwdef struct CaseStudySpec{U,P}
-    u0::U
-    p::P
-    tspan::Tuple{Float64,Float64}
-    dt::Float64
-    alg::Any = RK4()
-    adaptive::Bool = false
-    saveat::Union{Nothing,Float64,AbstractVector{Float64}} = nothing
-    reltol::Float64 = 1e-3
-    abstol::Float64 = 1e-6
+# -----------------------------
+# Experiment 1 specification
+# -----------------------------
+Base.@kwdef struct Experiment1Spec{U,P}
+    u0::U = [1.0, 1.0, 1.0]
+    p::P  = [0.1, 0.1, 14.0]
+    tspan::Tuple{Float64,Float64} = (0.0, 200.0)
+
+    dt0::Float64 = 1e-2
+    halvings::Int = 6               # number of dt values, inclusive of dt0
+    warmup_steps::Int = 10          # short warm-up solve length in steps
 end
 
-case_study_benchmark_spec(alg; adaptive=false) =
-    CaseStudySpec(u0=[1.0,1.0,1.0], p=[0.1,0.1,14.0],
-                  tspan=(0.0,2000.0), dt=1e-2, alg=alg, adaptive=adaptive)
+@inline function dt_schedule(dt0::Float64, halvings::Int)
+    # [dt0, dt0/2, dt0/4, ...] length == halvings
+    return [dt0 / 2.0^(k-1) for k in 1:halvings]
+end
 
-function run_case_study(spec::CaseStudySpec)
-    u0 = spec.u0
-    p  = spec.p
+function build_systems_for_experiment1(spec::Experiment1Spec)
+    u0_in = spec.u0
+    p_in  = spec.p
     tspan = spec.tspan
-    dt = spec.dt
-    alg = spec.alg
 
-    s_u0 = u0 isa SVector ? u0 : SVector(u0...)
-    s_p  = p  isa SVector ? p  : SVector(p...)
+    # Ensure vector-based variants have a mutable Vector u0 (important for in-place RHS).
+    u0_vec = u0_in isa SVector ? collect(u0_in) :
+             (u0_in isa AbstractVector ? u0_in : collect(u0_in))
 
-    systems = [
-        ode_system(rossler_naive,         u0,       p,   tspan; inplace=false, alg=alg, dt=dt),
-        ode_system(rossler,               u0,       p,   tspan; inplace=false, alg=alg, dt=dt),
-        ode_system(rossler_naive!,    copy(u0),     p,   tspan; inplace=true,  alg=alg, dt=dt),
-        ode_system(rossler!,          copy(u0),     p,   tspan; inplace=true,  alg=alg, dt=dt),
-        ode_system(rossler_static_naive,  s_u0,     p,   tspan; inplace=false, alg=alg, dt=dt),
-        ode_system(rossler_static,        s_u0,     p,   tspan; inplace=false, alg=alg, dt=dt),
-        ode_system(rossler_type_stable,   u0,       p,   tspan; inplace=false, alg=alg, dt=dt),
-        ode_system(rossler_ad,            s_u0,     s_p, tspan; inplace=false, alg=alg, dt=dt),
-    ]
+    p_vec  = p_in isa AbstractVector ? p_in : collect(p_in)
 
-    # Warm-up solves for compilation
+    # Static versions use SVectors for state; params can remain any indexable container.
+    s_u0 = u0_in isa SVector ? u0_in : SVector(u0_vec...)
+    s_p  = p_in  isa SVector ? p_in  : SVector(p_vec...)
+
+    systems = ODESys[]
+
+    push!(systems, ode_system("rossler_naive", rossler_naive, u0_vec, p_vec, tspan; inplace=false))
+    push!(systems, ode_system("rossler", rossler, u0_vec, p_vec, tspan; inplace=false))
+
+    # Use fresh u0 vectors for in-place variants (defensive; avoids any accidental aliasing surprises).
+    push!(systems, ode_system("rossler_naive!", rossler_naive!, copy(u0_vec), p_vec, tspan; inplace=true))
+    push!(systems, ode_system("rossler!", rossler!, copy(u0_vec), p_vec, tspan; inplace=true))
+
+    push!(systems, ode_system("rossler_static_naive", rossler_static_naive, s_u0, p_vec, tspan; inplace=false))
+    push!(systems, ode_system("rossler_static", rossler_static, s_u0, p_vec, tspan; inplace=false))
+
+    push!(systems, ode_system("rossler_type_stable", rossler_type_stable, u0_vec, p_vec, tspan; inplace=false))
+
+    # Optional: include AD-ready variant if it exists in impl.jl
+    if isdefined(@__MODULE__, :rossler_ad)
+        push!(systems, ode_system("rossler_ad", rossler_ad, s_u0, s_p, tspan; inplace=false))
+    end
+
+    return systems
+end
+
+"""
+    run_experiment1(spec; rhs_samples=200, rhs_evals=1, solve_samples=20, solve_seconds=1.0)
+
+Returns (NamedTuple):
+- dts          :: Vector{Float64}
+- systems      :: Vector{ODESys}  (one per RHS variant)
+- rhs_trials   :: Dict{String, BenchmarkTools.Trial}
+- solve_trials :: Dict{String, Dict{Float64, BenchmarkTools.Trial}}
+
+Notes:
+- RHS trials are collected once per variant (dt-independent).
+- Solve trials are collected per (variant, dt) for dt in the halving schedule.
+- No attempt is made to “measure stack allocations” numerically; instead, heap allocs/bytes
+  are reported (0 heap allocs implies stack/register-resident temporaries in practice).
+"""
+function run_experiment1(spec::Experiment1Spec;
+    rhs_samples::Int=200,
+    rhs_evals::Int=1,
+    solve_samples::Int=20,
+    solve_seconds::Float64=1.0,
+)
+    dts = dt_schedule(spec.dt0, spec.halvings)
+    systems = build_systems_for_experiment1(spec)
+
+    # Warm-up compilation with a short tspan (avoid paying full-horizon cost just to compile).
     for sys in systems
-        sp = spec.adaptive ?
-            ODESolveParams(; alg=alg, adaptive=true, reltol=spec.reltol, abstol=spec.abstol,
-                            save_on=false, dense=false, save_everystep=false) :
-            ODESolveParams(; alg=alg, adaptive=false, dt=spec.dt,
-                            save_on=false, dense=false, save_everystep=false)
-
-        solve_system_fast(sys, sp)
+        t0 = sys.tspan[1]
+        tw = (t0, t0 + spec.warmup_steps * dts[1])
+        prob_warm = make_prob(sys; tspan=tw)
+        solve_fixed_rk4(prob_warm, dts[1])
     end
 
     rhs_trials = Dict{String,BenchmarkTools.Trial}()
     for sys in systems
-        rhs_trials[string(sys.f)] = bench_rhs(sys; samples=100, evals=1)
+        rhs_trials[sys.name] = bench_rhs(sys; samples=rhs_samples, evals=rhs_evals)
     end
 
-    solve_trials = Dict{String,BenchmarkTools.Trial}()
+    solve_trials = Dict{String, Dict{Float64,BenchmarkTools.Trial}}()
     for sys in systems
-        sp = spec.adaptive ?
-            ODESolveParams(; alg=alg, adaptive=true, reltol=spec.reltol, abstol=spec.abstol,
-                            dense=false, save_everystep=false, save_on=false) :
-            ODESolveParams(; alg=alg, adaptive=false, dt=spec.dt,
-                            dense=false, save_everystep=false, save_on=false)
-
-        solve_trials[string(sys.f)] = bench_solve(sys, sp; samples=1000, seconds=1.0)
+        prob = make_prob(sys)  # fixed model + horizon; vary dt only
+        per_dt = Dict{Float64,BenchmarkTools.Trial}()
+        for dt in dts
+            per_dt[dt] = bench_solve(prob; dt=dt, samples=solve_samples, seconds=solve_seconds)
+        end
+        solve_trials[sys.name] = per_dt
     end
 
-    return (systems=systems, rhs_trials=rhs_trials, solve_trials=solve_trials)
-end
-
-function run_studies()
-    rk4_fixed_results        = run_case_study(case_study_benchmark_spec(RK4();  adaptive=false))
-    tsit5_adaptive_results   = run_case_study(case_study_benchmark_spec(Tsit5(); adaptive=true))
-    # euler_fixed_results      = run_case_study(case_study_benchmark_spec(Euler(); adaptive=false))
-    midpoint_fixed_results   = run_case_study(case_study_benchmark_spec(Midpoint(); adaptive=false))
-    return Dict(
-        "RK4 Fixed"        => rk4_fixed_results,
-        "Tsit5 Adaptive"   => tsit5_adaptive_results,
-        # "Euler Fixed"      => euler_fixed_results,
-        "Midpoint Fixed"   => midpoint_fixed_results,
-    )
+    return (dts=dts, systems=systems, rhs_trials=rhs_trials, solve_trials=solve_trials)
 end
