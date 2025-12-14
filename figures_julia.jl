@@ -394,8 +394,8 @@ function plot_dt_sweep(
     end
 
     if loglog
-        xscale!(p, :log10)
-        yscale!(p, :log10)
+        # Plots.jl sets axis scaling via keywords (no universal `xscale!`/`yscale!`).
+        plot!(p; xscale=:log10, yscale=:log10)
     end
 
     return p
