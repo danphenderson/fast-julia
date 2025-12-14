@@ -3,6 +3,7 @@ module BenchmarkFlatten
 using Statistics
 using BenchmarkTools
 using DataFrames
+using CSV
 
 @inline function _median_time_ns(trial::BenchmarkTools.Trial)::Float64
     # trial.times is typically Vector{UInt64} in nanoseconds
@@ -87,12 +88,19 @@ function flatten_experiment1(res; label::AbstractString="RK4 Fixed")
     return rows
 end
 
-"""
-    dataframe(res; label="RK4 Fixed") -> DataFrame
-Convenience wrapper around `flatten_experiment1`.
-"""
 function dataframe(res; label::AbstractString="RK4 Fixed")
     return DataFrame(flatten_experiment1(res; label=label))
+end
+
+function write_results_to_csv(res; outpath::AbstractString="poster/results.csv",
+                              solver_label::AbstractString="RK4 Fixed")
+    df = DataFrame(flatten_experiment1(res; label=solver_label))
+    # Ensure output directory exists
+    outdir = dirname(String(outpath))
+    isempty(outdir) || mkpath(outdir)
+
+    CSV.write(outpath, df)
+    return outpath
 end
 
 end # module BenchmarkFlatten

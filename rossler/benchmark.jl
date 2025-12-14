@@ -1,11 +1,13 @@
 # rossler/benchmark.jl
 include(joinpath(@__DIR__, "impl.jl"))
+include(joinpath(@__DIR__, "utils.jl"))
 
 using DifferentialEquations
 using BenchmarkTools
 using StaticArrays
+using .BenchmarkFlatten
 
-# =============================================================================
+# ========================================  =====================================
 # Experiment 1: RK4 fixed-step, varying RHS implementations, dt-halving sweep
 # =============================================================================
 @inline ode_benchmark_solve_kwargs() = (;
@@ -177,4 +179,51 @@ function run_experiment1(spec::Experiment1Spec;
     end
 
     return (dts=dts, systems=systems, rhs_trials=rhs_trials, solve_trials=solve_trials)
+end
+
+function write_results_to_csv(res)
+    dts = res.dts
+    rhs_trials = res.rhs_trials
+    solve_trials = res.solve_trials
+
+    # Write RHS results
+    open("rhs_benchmarks.csv", "w") do io
+        println(io, "RHS,Benchmark")
+        for (name, trial) in rhs_trials
+            println(io, "$name,$trial")
+        end
+    end
+
+    # Write solve results
+    open("solve_benchmarks.csv", "w") do io
+        println(io, "System,dt,Benchmark")
+        for (name, per_dt) in solve_trials
+            for (dt, trial) in per_dt
+                println(io, "$name,$dt,$trial")
+            end
+        end
+    end
+end
+
+function main()
+    spec = Experiment1Spec()
+    res = run_experiment1(spec)
+    println("writing results to CSV...")
+    path = BenchmarkFlatten.write_results_to_csv(res; outpath="poster/results.csv", solver_label="RK4 Fixed")
+    println("wrote: ", path)
+    println("RHS benchmarks:")
+    for (name, trial) in res.rhs_trials
+        println("$name: ", trial)
+    end
+
+    println("\nSolve benchmarks:")
+    for (name, per_dt) in res.solve_trials
+        println("System: $name")
+        for (dt, trial) in per_dt
+            println("  dt=$dt: ", trial)
+        end
+    end
+
+    println("writing results to CSV...")
+    write_results_to_csv(res)
 end
