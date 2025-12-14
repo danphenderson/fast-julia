@@ -102,28 +102,13 @@ Finish the poster with a single clear narrative: **small, production-grade code 
 ## 0) Resolve headline metric + claim consistency (blocker)
 Your current poster text claims a “tenfold speedup,” but the current Midpoint fixed-step results you’ve been working with (as reflected in your table/fig placeholders) do **not** obviously support 10× solve-time speedup. Decide which metric is headline and make the claim match computed numbers everywhere.
 
-- [ ] Choose the **headline metric** (pick exactly one):
-  - A) **Solve-time speedup** (end-to-end `solve` timing; likely smaller multipliers unless using ensemble / long horizon)
-  - B) **RHS throughput speedup** (per-call cost, allocations; often shows larger multipliers and matches “production lessons” best)
-- [ ] Choose **one** headline experiment spec (single source of truth), aligned to the headline metric:
-  - Recommended if A: fixed-step solve spec (Midpoint or RK4 fixed dt), output disabled
-  - Recommended if B: `bench_rhs` + allocation deltas front-and-center
-- [ ] Update **Abstract + Introduction** to reflect the computed headline number (remove “tenfold” until it is computed and verified).
-- [ ] Replace `\red{XX}` with a computed value from the generated table, not hand-edited text.
-
-**Acceptance criteria**
-- Poster claims (e.g., “10×”) match the computed headline number for the chosen experiment.
-- The headline number appears in **exactly two places** (Abstract + Introduction) and matches plotted data.
-
----
-
 ## 1) Lock scope and narrative (do first)
 - [x] Intro to Rössler; then illustrate out-of-place vs in-place updating in pass-by-reference language.
-- [ ] Add 2–3 poster-distance bullets explaining stack allocation (`StaticArrays`) and why allocations matter (GC pressure / throughput).
-- [ ] Add 2–3 poster-distance bullets explaining `@inbounds` / `@inline` as “remove bounds checks / encourage inlining,” and why that can matter in tight loops.
+- [x] Add 2–3 poster-distance bullets explaining stack allocation (`StaticArrays`) and why allocations matter (GC pressure / throughput).
+- [x] Add 2–3 poster-distance bullets explaining `@inbounds` / `@inline` as “remove bounds checks / encourage inlining,” and why that can matter in tight loops.
   - Keep it factual; avoid over-claiming compiler behavior.
 - [x] Confirmed: **performance ladder variants are already implemented in code** (benchmark driver constructs 8 variants).
-- [ ] Choose which **6–8 variants** you will actually show on the poster (recommend 6 for clarity):
+- [x] Choose which **6–8 variants** you will actually show on the poster (recommend 6 for clarity):
   - Suggested core ladder (6):
     1) `rossler_naive` (allocating)
     2) `rossler` (allocating + `@inbounds/@inline`)
@@ -134,8 +119,8 @@ Your current poster text claims a “tenfold speedup,” but the current Midpoin
   - Optional add-ons (only if they strengthen the story without clutter):
     - `rossler_type_stable`
     - `rossler_ad`
-- [ ] Define baseline and speedup formula (single choice, used everywhere):
-  - Baseline (recommended): `rossler_naive`
+- [x] Define baseline and speedup formula (single choice, used everywhere):
+  - Baseline: `rossler_naive`
   - Speedup: `median_time(baseline) / median_time(variant)`
 
 **Acceptance criteria**
@@ -149,17 +134,19 @@ Your current poster text claims a “tenfold speedup,” but the current Midpoin
   - RHS timing
   - Solve timing
   - allocations/bytes
-- [ ] Ensure the experiment uses consistent settings:
-  - fixed-step: `tspan`, `dt`, `saveat`/output disabling policy
-  - adaptive: tolerances (if included at all—prefer to omit for poster scope)
+- [ ] Ensure the experiment uses consistent settings and that `poster.tex` matches them exactly:
+  - fixed-step: `tspan`, `dt`, solver (RK4), output disabling policy
+  - (Avoid adaptive tolerances unless you explicitly add an adaptive experiment panel)
 - [ ] Document benchmark policy in one place (script header or poster “Experiment Spec” box):
   - warmup policy
   - `BenchmarkTools` configuration
   - whether output is disabled (e.g., `save_on=false`, `dense=false`, etc.)
+- [ ] Make the parameter story consistent in text:
+  - “canonical parameters” used for the attractor visualization vs. the benchmark parameters (currently these differ in `poster.tex`)
 
 **Acceptance criteria**
 - Running the benchmark script twice yields stable median ordering (minor variance acceptable).
-- Captions state: metric, baseline, units, and output policy.
+- Captions state: metric, baseline, units, solver spec, and output policy.
 
 ---
 
@@ -201,18 +188,19 @@ This script must:
 - [ ] Write all poster assets to: `./poster/figures/`
 - [ ] Produce **exactly the figures referenced by `poster.tex`** (no extra, no missing).
 
-### Minimum figure set (recommended)
-- [ ] **Figure A — Solve time bar chart**
-  - `midpoint_solve_times.png` or `rk4_solve_times.png`
-  - 6 variants preferred; log y-axis only if necessary
-- [ ] **Figure B — RHS time + allocations**
-  - Either combined figure or two:
-    - median RHS time
-    - allocations/bytes per RHS call (high impact)
-- [ ] **Figure C — Solution sanity check**
-  - Single 2D projection or 3D trajectory for one chosen variant/spec
+### Minimum figure set (updated to match your current poster intent)
+- [ ] **Figure A — Solve-time speedup (log scale)**
+  - Currently referenced as: `rk4_time_normalized_log10.png`
+  - Keep speedup definition consistent with captions.
+- [ ] **Figure B — Solve-time bar chart (normalized)**
+  - Create a second, distinct asset (do not reuse the same file twice).
+  - Update `poster.tex` to reference the new filename.
+- [ ] **Figure C — RHS + allocations**
+  - RHS median time + allocations/bytes per RHS call (combined or two panels).
+- [ ] **Figure D — Attractor / solution sanity check**
+  - Use this to satisfy the “Add Figure: Rössler attractor” placeholder in the Introduction.
 - [ ] Generate LaTeX table from data (avoid drift):
-  - `./poster/figures/midpoint_table.tex` (or rk4 equivalent)
+  - `./poster/figures/rk4_table.tex` (or a naming scheme you standardize)
 
 **Acceptance criteria**
 - One command regenerates all assets:
@@ -220,36 +208,6 @@ This script must:
 - `poster.tex` compiles without manual figure/table edits.
 - `poster.tex` uses `\input{./figures/<table>.tex}` rather than a hand-typed table.
 
----
-
-## 4) Replace fragile TikZ diagram with a stable included graphic
-- [ ] Remove large TikZ pipeline diagram block from `poster.tex`.
-- [ ] Replace with:
-  - `\includegraphics{./figures/pipeline_overview.(pdf|png)}`
-- [ ] Generate `pipeline_overview` via:
-  - Mermaid → SVG/PDF, or
-  - standalone TikZ compiled separately, or
-  - vector diagram tool of choice
-
-**Acceptance criteria**
-- Poster compiles reliably with fewer TikZ dependencies and faster iteration.
-
----
-
-## 5) Make poster code listings match the repository (no copy/paste drift)
-Current poster listings use generic names; repo distinguishes `rossler_naive` vs `rossler`, etc. Fix this to avoid conceptual and factual drift.
-
-- [ ] Replace hand-copied listings with `\lstinputlisting` slices from source files:
-  - `\lstinputlisting[firstline=..., lastline=...]{../rossler/impl.jl}`
-- [ ] Ensure the poster shows the *actual* ladder names used in benchmarks:
-  - `rossler_naive`, `rossler`, `rossler_naive!`, `rossler!`, `rossler_static_naive`, `rossler_static`, etc.
-- [ ] Keep snippets short: only what supports the ladder.
-
-**Acceptance criteria**
-- Code shown on the poster is identical to repo code (directly included from it).
-- Captions correctly describe allocation behavior of the shown function.
-
----
 
 ## 6) Content polish: make claims consistent and readable at poster distance
 - [ ] Replace placeholders (“XX-fold speedup”) with computed values.
