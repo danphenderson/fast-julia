@@ -17,19 +17,19 @@
 \renewcommand{\arraystretch}{1.05}%
 
 \noindent
-\begin{minipage}[t]{0.34\textwidth}
+\begin{minipage}[t]{0.3\textwidth}
   {\Huge\bfseries\color{PMS310C} Fast Julia}\\[1ex]
-  {\Large\itshape Optimizing Dense Systems of ODEs}\\[2ex]
+  {\Large\itshape Optimizing Dense ODE Systems}\\[2ex]
   {\large Daniel Henderson}\\
   {\normalsize Michigan Technological University}\\
   {\small\ttfamily dphender@mtu.edu}
 \end{minipage}%
-\begin{minipage}[t]{0.24\textwidth}\vspace{0pt}
+\begin{minipage}[t]{0.5\textwidth}\vspace{0pt}
 {\Large\textbf{Abstract}}
 {\normalsize
-We compare naïve and optimized Julia implementations for solving
-small to moderate systems of (ODEs), $\vx'(t) = \vf(\vx, t)$ with
-$\dim(\vx) \leq 10^2$. We demonstrate how to asses and resolve performance 
+We benchmark naïve and optimized Julia implementations
+on a representative problem for small to moderate systems of (O), $\vx'(t) = \vf(\vx, t)$ with
+$\dim(\vx) \leq 10^2$. We demonstrate how to assess and resolve performance 
 bottlenecks using the Rössler system as a case study. Numerical Experiments
 show that a sequence of targeted changes—in-place updates, type stability—can
 yield C-like performance while preserving code clarity. Benchmarks for our single experiment (fixed-step RK4 on the Rössler system) show that tuned in-place or static-array variants cut runtime by $\approx4\times$ and eliminate hundreds of thousands of allocations compared to the naïve baseline.}
@@ -86,16 +86,23 @@ The Rössler ODE system is defined as
 \end{flalign*}
 
 \noindent
+where the canonical Rössler parameters are $a=0.2$, $b=0.2$, $c=5.7$.
+The system~\eqref{eq:rossler} is non-stiff and exhibits chaotic dynamics, making it a
+standard benchmark problem for ODE solvers.
 where canonical parameters are $a=0.2$, $b=0.2$, $c=5.7$.
-The \ref{eq:rossler} system is non-stiff and exhibits chaotic dynamics, making it suitable
-benchmark problem for ODE solvers. Numerical integration is done with the classical 4th-order Runge-Kutta (RK4) method - an explicit
-solver with $4$-stages, leading to 4 evaluations of $\vf$ at each fixed step. We seek $\vx(t)$ for $t \in [0, T]$ subject
-to IC $\vx_0=(1, 1, 1)$ and parameters $\vp=(0.1, 0.1, 15.7)$.
 
 \medskip
 
 \noindent
-The goal is to achieve the fastest possible integration time for this system, while mainting code clarity.
+For benchmarking purposes, we fix $\vx_0=(1,1,1)$ and choose
+$\vp=(0.1,\,0.1,\,15.7)$, which yields representative dynamics while avoiding
+stiffness. All experiments integrate~\eqref{eq:rossler} over $t \in [0,T]$
+using classical fixed-step RK4.
+
+\medskip
+
+\noindent
+The goal is to achieve the fastest possible integration time for this system, while maintaining code clarity.
 C-like performance is achieved using \texttt{DifferentialEquations.jl}~\cite{DifferentialEquations.jl-2017}
 from the SciML ecosystem, utilizing documented techniques for optimizing the model code $\vf$
 [\cite{SciMLTutorial}, \cite{DiffEqDocsFasterODEExample}].
@@ -111,7 +118,7 @@ and the CPU scales linearly. The linear scaling of RK4 is a key expectation veri
 
 \medskip
 
-\subsection*{Heap vs. Stack Allocation:} Heap vs. Stack Allocation: In Julia (and low-level languages like C),
+\subsection*{Heap vs. Stack Allocation:} In Julia (and low-level languages like C),
 data can often be allocated on the stack instead of the heap. Stack allocation is fast and has essentially no
 overhead for creation or cleanup – memory is managed by the function call stack and automatically reclaimed 
 when out of scope. Our benchmarks will illustrate how different coding patterns for the Rössler ODE affect 
@@ -245,7 +252,7 @@ the lowered code to understand the impact of these changes.
 %----------------------------------------------------------------------------------------
 
 %------------------------ Conclusion ------------------------
-\section*{Conclusion: Optimizing ODEs in Julia}
+\section*{Conclusion: Optimizing ODE systems in Julia}
 \noindent
 Experiment 1 confirms that tightening the RHS kernel delivers most of the speedup: moving from naïve allocation to tuned in-place or \texttt{SVector} code removes GC noise, shrinks solve time by $\sim5\times$, and keeps the solver stable across long trajectories.
 
