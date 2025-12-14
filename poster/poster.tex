@@ -96,8 +96,16 @@ of the Rössler system \eqref{eq:rossler}, together with a type-stable fixed/sta
   \item optimized in-place code eliminates per-call allocations for \texttt{Vector}-based states; and
   \item a \texttt{StaticArrays.jl}/\texttt{SVector} implementation enables stack allocation, often fastest for very small systems.
 \end{itemize}
-We optimize each implementation using macros \texttt{\@inbounds}, \texttt{\@inline}, and we see
-the lowered code to understand the impact of these changes.
+  \textbf{Performance ladder highlights.}
+  \begin{itemize}
+    \item \texttt{StaticArrays} keep the three-state RHS on the stack, reducing heap pressure and GC noise.
+    \item Fixed-size math improves cache locality and throughput for tight ODE kernels.
+    \item \texttt{@inbounds} removes bounds checks once dimensions are known at compile time.
+    \item \texttt{@inline} encourages the compiler to fuse the RHS into the solver loop, trimming call overhead.
+    \item Fewer checks and calls leave the CPU focused on arithmetic in the hot loop.
+  \end{itemize}
+  We optimize each implementation using macros \texttt{\@inbounds}, \texttt{\@inline}, and we see
+  the lowered code to understand the impact of these changes.
 
 \medskip
 
@@ -182,13 +190,13 @@ end
 \begin{minipage}[t]{0.475\linewidth} % Left figure
   \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
   {\captionsetup{hypcap=false}%
-  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}}
+  \captionof{figure}{Solve-time speedup for Rössler RHS variants relative to the naïve out-of-place baseline `rossler\_naive`, using $\text{speedup}=\mathrm{median\_time}(\texttt{rossler\_naive})/\mathrm{median\_time}(\text{variant})$.}}
 \end{minipage}
 \hfill
 \begin{minipage}[t]{0.475\linewidth} % Right figure
   \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
   {\captionsetup{hypcap=false}%
-  \captionof{figure}{Placeholder benchmark plot comparing naïve and optimized Julia implementations for a Rössler-type ODE system.}}
+  \captionof{figure}{Solve-time bar chart normalized against the same `rossler\_naive` baseline, highlighting the six core ladder functions and using the speedup definition $\mathrm{median\_time}(\texttt{rossler\_naive})/\mathrm{median\_time}(\text{variant})$.}}
 \end{minipage}
 \end{minipage}
 % --- Table placeholder: benchmark numbers ---
@@ -203,7 +211,7 @@ end
     \bottomrule
   \end{tabular}
   {\captionsetup{hypcap=false}%
-  \captionof{table}{Placeholder benchmark table comparing relative runtime, memory allocations and overall speedup factors.}}
+  \captionof{table}{Relative runtime, allocations and speedup, where speedup is always computed as $\mathrm{median\_time}(\texttt{rossler\_naive})/\mathrm{median\_time}(\text{variant})$ to keep the naïve out-of-place implementation as the baseline.}}
 \end{center}
 
 \medskip
