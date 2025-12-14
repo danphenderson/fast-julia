@@ -3,78 +3,104 @@ module BenchmarkFlatten
 using Statistics
 using BenchmarkTools
 using DataFrames
+using CSV
+
+@inline function _median_time_ns(trial::BenchmarkTools.Trial)::Float64
+    # trial.times is typically Vector{UInt64} in nanoseconds
+    return Float64(median(trial.times))
+end
 
 """
-    flatten_run_studies(results) -> Vector{NamedTuple}
+    flatten_experiment1(res; label="RK4 Fixed") -> Vector{NamedTuple}
 
-Flatten the nested dictionary produced by `run_studies()` into a flat vector of
-named tuples.  Each entry in the returned vector summarizes a single
-benchmark trial and contains the following fields:
+Flatten the result returned by `run_experiment1(...)` into a flat vector of
+named tuples suitable for `DataFrame(...)`.
 
-* `solver::String` – the descriptive name of the solver (e.g. "RK4 Fixed").
-* `variant::String` – the name of the Rössler implementation; keys of the
-  `rhs_trials` and `solve_trials` dictionaries.
-* `metric::Symbol` – either `:rhs` for micro-benchmarks of the right-hand
-  side or `:solve` for full ODE solves.
-* `median_time_ns::Float64` – the median run time in nanoseconds, computed
-  from the `times` field of the `BenchmarkTools.Trial` object.
-* `median_time_s::Float64` – the same median run time converted to seconds.
-* `memory::Int` – the number of bytes allocated per call, from the
-  `memory` field of the `Trial`.
-* `allocs::Int` – the number of allocations per call, from the `allocs`
-  field of the `Trial`.
+Expected `res` fields:
+- `res.dts`
+- `res.systems`       (each with `.name` and `.tspan`)
+- `res.rhs_trials`    :: Dict{String, BenchmarkTools.Trial}
+- `res.solve_trials`  :: Dict{String, Dict{Float64, BenchmarkTools.Trial}}
 
-This helper makes it easy to inspect and visualize benchmarking results.  For
-example, after running `results = run_studies()`, you can call
-
-```julia
-using DataFrames
-using .BenchmarkFlatten
-flat = flatten_run_studies(results)
-df = DataFrame(flat)
-first(df, 8)
-```
-
-to obtain a tabular view of all recorded benchmarks.
+Returned fields:
+* `solver::String`                 – label you choose (default "RK4 Fixed")
+* `variant::String`
+* `metric::Symbol`                 – `:rhs` or `:solve`
+* `dt::Union{Missing,Float64}`     – `missing` for `:rhs`, numeric for `:solve`
+* `nsteps::Union{Missing,Int}`     – `missing` for `:rhs`, computed for `:solve`
+* `median_time_ns::Float64`
+* `median_time_s::Float64`
+* `memory::Int`                    – heap bytes per call (BenchmarkTools)
+* `allocs::Int`                    – heap allocations per call (BenchmarkTools)
 """
-function flatten_run_studies(results)
+function flatten_experiment1(res; label::AbstractString="RK4 Fixed")
     rows = NamedTuple[]
-    for (solver, study) in results
-        rhs_trials = study.rhs_trials
-        solve_trials = study.solve_trials
-        # Flatten right-hand-side micro-benchmarks
-        for (fn, trial) in rhs_trials
-            mt = median(trial.times)
+
+    rhs_trials   = res.rhs_trials
+    solve_trials = res.solve_trials
+    systems      = res.systems
+
+    # variant -> tspan for step-count computation
+    tspan_by_variant = Dict{String,Tuple{Float64,Float64}}()
+    for sys in systems
+        tspan_by_variant[String(sys.name)] = sys.tspan
+    end
+
+    # RHS micro-benchmarks (dt-independent)
+    for (variant, trial) in rhs_trials
+        mt = _median_time_ns(trial)
+        push!(rows, (
+            solver = String(label),
+            variant = String(variant),
+            metric = :rhs,
+            dt = missing,
+            nsteps = missing,
+            median_time_ns = mt,
+            median_time_s = mt * 1e-9,
+            memory = Int(trial.memory),
+            allocs = Int(trial.allocs),
+        ))
+    end
+
+    # Full-solve benchmarks (dt sweep)
+    for (variant, per_dt) in solve_trials
+        v = String(variant)
+        tspan = get(tspan_by_variant, v, (NaN, NaN))
+        T = tspan[2] - tspan[1]
+
+        for (dt, trial) in per_dt
+            mt = _median_time_ns(trial)
+            nsteps = isfinite(T) ? Int(ceil(T / dt)) : missing
             push!(rows, (
-                solver = solver,
-                variant = fn,
-                metric = :rhs,
-                median_time_ns = mt,
-                median_time_s = mt * 1e-9,
-                memory = trial.memory,
-                allocs = trial.allocs,
-            ))
-        end
-        # Flatten full solve benchmarks
-        for (fn, trial) in solve_trials
-            mt = median(trial.times)
-            push!(rows, (
-                solver = solver,
-                variant = fn,
+                solver = String(label),
+                variant = v,
                 metric = :solve,
+                dt = Float64(dt),
+                nsteps = nsteps,
                 median_time_ns = mt,
                 median_time_s = mt * 1e-9,
-                memory = trial.memory,
-                allocs = trial.allocs,
+                memory = Int(trial.memory),
+                allocs = Int(trial.allocs),
             ))
         end
     end
+
     return rows
 end
 
-function dataframe(results)
-    flat = flatten_run_studies(results)
-    return DataFrame(flat)
+function dataframe(res; label::AbstractString="RK4 Fixed")
+    return DataFrame(flatten_experiment1(res; label=label))
+end
+
+function write_results_to_csv(res; outpath::AbstractString="poster/results.csv",
+                              solver_label::AbstractString="RK4 Fixed")
+    df = DataFrame(flatten_experiment1(res; label=solver_label))
+    # Ensure output directory exists
+    outdir = dirname(String(outpath))
+    isempty(outdir) || mkpath(outdir)
+
+    CSV.write(outpath, df)
+    return outpath
 end
 
 end # module BenchmarkFlatten

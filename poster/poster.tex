@@ -28,12 +28,11 @@
 {\Large\textbf{Abstract}}
 {\normalsize
 We compare naïve and optimized Julia implementations for solving
-small to moderate systems of ordinary differential equations (ODEs),
-$\vx'(t) = \vf(\vx, t)$ with $\dim(\vx) \leq 10^2$.
-We demonstrate how a sequence of targeted changes—in-place updates, type stability and
-solver selection—can yield order-of-magnitude speedups while preserving code clarity and
-reproducibility.  By applying these techniques we achieve a tenfold speedup over the original
-code and demonstrate how to scale up to larger systems.}
+small to moderate systems of (ODEs), $\vx'(t) = \vf(\vx, t)$ with
+$\dim(\vx) \leq 10^2$. We demonstrate how to asses and resolve performance 
+bottlenecks using the Rössler system as a case study. Numerical Experiments
+show that a sequence of targeted changes—in-place updates, type stability—can
+yield C-like performance while preserving code clarity. Benchmarks for our single experiment (fixed-step RK4 on the Rössler system) show that tuned in-place or static-array variants cut runtime by $\approx4\times$ and eliminate hundreds of thousands of allocations compared to the naïve baseline.}
 \end{minipage}
 }
 
@@ -42,28 +41,36 @@ code and demonstrate how to scale up to larger systems.}
 \vspace{0.20cm}
 
 %----------------------------------------------------------------------------------------
-% BODY (3 COLUMNS)
+% BEGIN: BODY (3 COLUMNS)
 %----------------------------------------------------------------------------------------
 \begin{paracol}{3}
   \setcolumnwidth{0.28\textwidth,0.44\textwidth,0.28\textwidth}
 
-%------------------------ INTRODUCTION ------------------------
+%----------------------------------------------------------------------------------------
+% BEGIN: LEFT COLUMN
+%----------------------------------------------------------------------------------------
 \section*{Introduction}
 
 \noindent
+\begin{center}
+  \includegraphics[width=0.9\linewidth]{pipeline_placeholder.pdf}
+  {\captionsetup{hypcap=false}%
+  \captionof{figure}{Experiment 1 pipeline: define Rössler RHS variants, integrate with fixed-step RK4, and benchmark runtime/allocations for both the RHS call and full solve.}}
+\end{center}
+
+\medskip
+\hrulefill
+\medskip
+
+\noindent
 ODE workflows often involve ensembles: many solves across parameters, initial conditions,
-or time horizons. In that regime, per-call overhead in the SciML RHS
-$f!(\vu, \vx, \vp, t)$—especially allocations—dominates and can make otherwise
-simple experiments impractically slow.”
+or long time horizons. In that regime, per-call overhead to the ODE model function
+—especially allocations—dominates and can make otherwise simple experiments impractically slow.
 
 \medskip
 
 \noindent
-Targeted changes to model code-—in-place updates, type stability, and
-stack-vs.-heap allocations, etc. combined with the right choice of solver can
-yield order-of-magnitude speedups while keeping the code readable and
-extensible. In our case, we achieve a \red{XX} speedup from a naïve to an 
-optimized Julia implementation of the Rössler ODE system:
+The Rössler ODE system is defined as
 \begin{flalign*}
   \tag{Rössler} \label{eq:rossler}
   \quad \vx'(t) = \vf(\vx,\, \vp, \, t) = 
@@ -78,109 +85,91 @@ optimized Julia implementation of the Rössler ODE system:
   \end{cases*}, &&
 \end{flalign*}
 
+\noindent
+where canonical parameters are $a=0.2$, $b=0.2$, $c=5.7$.
+The \ref{eq:rossler} system is non-stiff and exhibits chaotic dynamics, making it suitable
+benchmark problem for ODE solvers. Numerical integration is done with the classical 4th-order Runge-Kutta (RK4) method - an explicit
+solver with $4$-stages, leading to 4 evaluations of $\vf$ at each fixed step. We seek $\vx(t)$ for $t \in [0, T]$ subject
+to IC $\vx_0=(1, 1, 1)$ and parameters $\vp=(0.1, 0.1, 15.7)$.
+
 \medskip
 
 \noindent
-We seek $\vx(t)$ for all $t \in [t_0, t_f]$ subject to the initial condition $\vx(t_0)=\vx_0$, with fixed
-parameters $\vp$. ``Production'' performance is achieved using \texttt{DifferentialEquations.jl} from the SciML
-ecosystem \cite{DifferentialEquations.jl-2017}, building on the SciML techniques
-\cite{SciMLTutorial} for optimizing the model code $\vf$.
+The goal is to achieve the fastest possible integration time for this system, while mainting code clarity.
+C-like performance is achieved using \texttt{DifferentialEquations.jl}~\cite{DifferentialEquations.jl-2017}
+from the SciML ecosystem, utilizing documented techniques for optimizing the model code $\vf$
+[\cite{SciMLTutorial}, \cite{DiffEqDocsFasterODEExample}].
 
 \medskip
 
+\subsection*{Computational Cost:} RK4 advances $\vx_n \approx \vx(t_n) \text{ via } \vx_{n+1} = \vx_n + \frac{h}{6} (k_1 + 2k_2 + 2k_3 + k_4)$.
+The variable cost at stages $k_1,\ldots,k_4$ is evaluating $\vf$ at intermediate points;
+which depend on the previous stage. Thus, the total flop count for final simulation time $T$ and step size $h$
+is $O(N)$, where $N=T/h$ is the total number of steps. Therefore, halving the step size (thereby doubling $N$)
+doubles the number of flops and should approximately double runtime, assuming overhead remains negligible
+and the CPU scales linearly. The linear scaling of RK4 is a key expectation verified in our benchmarks.
+
+\medskip
+
+\subsection*{Heap vs. Stack Allocation:} Heap vs. Stack Allocation: In Julia (and low-level languages like C),
+data can often be allocated on the stack instead of the heap. Stack allocation is fast and has essentially no
+overhead for creation or cleanup – memory is managed by the function call stack and automatically reclaimed 
+when out of scope. Our benchmarks will illustrate how different coding patterns for the Rössler ODE affect 
+whether memory is allocated on the heap or kept on the stack. In particular, we will see how using in-place
+updates and fixed size arrays can eliminate most heap allocations by leveraging stack storage.
+\footnote{``Stack allocation`` herein refers to any memory allocation that doesn't occur at runtime.
+Measuring a program's stack allocation requires third party external tools.}
+
+\medskip
+
+%------------------------ Bottom Column Visual  ------------------------
+\begin{mdframed}[backgroundcolor=gray!10]
+\textbf{Experiment 1 setup.} Classical RK4 with $h=0.01$ for $T=200$ ($n_\text{steps}=20{,}000$), IC $(1,1,1)$, parameters $(0.1,0.1,15.7)$. Variants: naïve allocating RHS, tuned out-of-place, naïve/tuned in-place, \texttt{SVector} naïve/tuned, type-stable, and AD-ready.
+
+\medskip
+\textbf{Metrics.} Benchmarks use \texttt{BenchmarkTools.jl}; we report median wall-clock time and heap allocations for (a) a single RHS call and (b) a full RK4 solve. Allocation-free entries indicate work stays on the stack.
+
+\medskip
+\textbf{Why it matters.} Ensembles and long horizons magnify per-call overhead. Tightening the RHS kernel pays dividends across every solver step and parameter sweep.
+\end{mdframed}
+
+\switchcolumn
+
+%----------------------------------------------------------------------------------------
+% BEGIN: MIDDLE COLUMN
+%----------------------------------------------------------------------------------------
+\section*{Experiment 1: Optimizing the Rössler ODE System}
+
 \noindent
-\textbf{Case Study.}  We compare out-of-place and in-place Julia implementations
-of the Rössler system \eqref{eq:rossler}, together with a type-stable fixed/static-size variant:
+We compare out-of-place and in-place Julia implementations
+of the \eqref{eq:rossler} system, together with a type-stable fixed/static-size variant:
 \begin{itemize}
   \item naïve out-of-place code allocates a new array at each right-hand-side call, triggering garbage collection;
   \item optimized in-place code eliminates per-call allocations for \texttt{Vector}-based states; and
   \item a \texttt{StaticArrays.jl}/\texttt{SVector} implementation enables stack allocation, often fastest for very small systems.
 \end{itemize}
-  \textbf{Performance ladder highlights.}
-  \begin{itemize}
-    \item \texttt{StaticArrays} keep the three-state RHS on the stack, reducing heap pressure and GC noise.
-    \item Fixed-size math improves cache locality and throughput for tight ODE kernels.
-    \item \texttt{@inbounds} removes bounds checks once dimensions are known at compile time.
-    \item \texttt{@inline} encourages the compiler to fuse the RHS into the solver loop, trimming call overhead.
-    \item Fewer checks and calls leave the CPU focused on arithmetic in the hot loop.
-  \end{itemize}
-  We optimize each implementation using macros \texttt{\@inbounds}, \texttt{\@inline}, and we see
-  the lowered code to understand the impact of these changes.
 
 \medskip
+
+\noindent\textbf{Performance ladder highlights.}
+\begin{itemize}
+  \item \texttt{StaticArrays} keep the three-state RHS on the stack, reducing heap pressure and GC noise.
+  \item Fixed-size math improves cache locality and throughput for tight ODE kernels.
+  \item \texttt{@inbounds} removes bounds checks once dimensions are known at compile time.
+  \item \texttt{@inline} encourages the compiler to fuse the RHS into the solver loop, trimming call overhead.
+  \item Fewer checks and calls leave the CPU focused on arithmetic in the hot loop.
+\end{itemize}
+
+\medskip
+
+\noindent
+We optimize each implementation using macros \texttt{@inbounds}, \texttt{@inline}, and we see
+the lowered code to understand the impact of these changes.
 
 \medskip
 \hrulefill
 \medskip
 
-% --- Figure: Pipeline Overview (TikZ) ---
-\medskip
-
-\section*{Case Study: Optimizing the Rössler ODE System}
-
-\noindent
-\begin{minipage}{\linewidth}
-\centering
-\begin{minipage}[t]{0.475\linewidth} % Left: out-of-place
-\begin{lstlisting}[
-  language=Julia,
-  linewidth=\linewidth,
-  breaklines=true,
-  caption={Out-of-place RHS using the SciML interface `f(u,p,t)` (returns a fresh array).},
-  label={lst:naive-out-of-place}
-]
-function rossler(u, p, t)
-    du1 = -u[2] - u[3]
-    du2 =  u[1] + p[1] * u[2]
-    du3 =  p[2] + u[3] * (u[1] - p[3])
-    return [du1, du2, du3]
-end
-\end{lstlisting}
-\td{\small \texttt{@allocated rossler([1.0,1.0,1.0], (0.1,0.1,12), 0.0)}
-  reports 240 bytes per call (typical).}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.475\linewidth} % Right: in-place
-\begin{lstlisting}[
-  language=Julia,
-  linewidth=\linewidth,
-  breaklines=true,
-  caption={In-place RHS using the SciML signature `f!(du,u,p,t)`.  Avoids per-call allocations and is typically fastest for `Vector`-based states.},
-  label={lst:in-place}
-]
-function rossler!(du, u, p, t)
-    x1 = u[1]
-    du[1] = -u[2] - u[3]
-    du[2] =  x1 + p[1] * u[2]
-    du[3] =  p[2] + u[3] * (x1 - p[3])
-    return nothing
-end
-\end{lstlisting}
-\end{minipage}
-\vspace{0.75em}
-\begin{lstlisting}[
-  language=Julia,
-  linewidth=\linewidth,
-  breaklines=true,
-  caption={Fixed-size, stack-allocated version using \texttt{StaticArrays}.},
-  label={lst:static}
-]
-function rossler_static(u, p, t)
-    x1 = u[1]
-    du1 = -u[2] - u[3]
-    du2 =  x1 + p[1] * u[2]
-    du3 =  p[2] + u[3] * (x1 - p[3])
-    return @SVector [du1, du2, du3]
-end
-\end{lstlisting}
-\end{minipage}
-% --- END FIRST COLUMN
-\switchcolumn
-
-% ------------------------ Middle Column ------------------------
-
-
-\noindent
 \subsection*{Results and Analysis}
 
 % --- Figures: speedup plot ---
@@ -188,67 +177,90 @@ end
 \begin{minipage}{\linewidth}
 \centering
 \begin{minipage}[t]{0.475\linewidth} % Left figure
-  \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
+  \includegraphics[width=0.95\linewidth]{rk4_fixed_speedup_solve_log10.png}
   {\captionsetup{hypcap=false}%
-  \captionof{figure}{Solve-time speedup for Rössler RHS variants relative to the naïve out-of-place baseline `rossler\_naive`, using $\text{speedup}=\mathrm{median\_time}(\texttt{rossler\_naive})/\mathrm{median\_time}(\text{variant})$.}}
+  \captionof{figure}{Experiment 1 speedup for fixed-step RK4 solves relative to the naïve out-of-place baseline `rossler\_naive`, using $\text{speedup}=\mathrm{median\_time}(\texttt{rossler\_naive})/\mathrm{median\_time}(\text{variant})$.}}
 \end{minipage}
 \hfill
 \begin{minipage}[t]{0.475\linewidth} % Right figure
-  \includegraphics[width=0.95\linewidth]{rk4_time_normalized_log10.png}
+  \includegraphics[width=0.95\linewidth]{rk4_fixed_allocs_solve.png}
   {\captionsetup{hypcap=false}%
-  \captionof{figure}{Solve-time bar chart normalized against the same `rossler\_naive` baseline, highlighting the six core ladder functions and using the speedup definition $\mathrm{median\_time}(\texttt{rossler\_naive})/\mathrm{median\_time}(\text{variant})$.}}
+  \captionof{figure}{Allocations per RK4 solve. In-place and \texttt{SVector} variants eliminate heap traffic, enabling predictable runtimes across long integrations.}}
 \end{minipage}
 \end{minipage}
-% --- Table placeholder: benchmark numbers ---
 \begin{center}
-  \begin{tabular}{lccc}
+  \begin{tabular}{lrrrr}
     \toprule
-    \textbf{Method} & \textbf{Runtime (rel.)} & \textbf{Allocations (rel.)} & \textbf{Speedup} \\
+    Variant & Median (ns) & Median (ms) & Allocs & Bytes \\
     \midrule
-    Naïve Julia      & 1.00 & 1.00 & $1.0\times$ \\
-    Optimized Julia  & 0.12 & 0.05 & $8.3\times$ \\
-    SciML baseline   & 0.10 & 0.04 & $10.0\times$ \\
+    naïve (alloc) & 42 & 4.2e-05 & 2 & 80 \\
+    oop (tuned) & 42 & 4.2e-05 & 2 & 80 \\
+    in-place (naïve) & 41 & 4.1e-05 & 0 & 0 \\
+    in-place (tuned) & 20.5 & 2.05e-05 & 0 & 0 \\
+    SVector (naïve) & 0.001 & 1e-09 & 0 & 0 \\
+    SVector (tuned) & 0.001 & 1e-09 & 0 & 0 \\
+    type-stable & 42 & 4.2e-05 & 2 & 80 \\
+    AD-ready & 41 & 4.1e-05 & 0 & 0 \\
     \bottomrule
   \end{tabular}
   {\captionsetup{hypcap=false}%
-  \captionof{table}{Relative runtime, allocations and speedup, where speedup is always computed as $\mathrm{median\_time}(\texttt{rossler\_naive})/\mathrm{median\_time}(\text{variant})$ to keep the naïve out-of-place implementation as the baseline.}}
+  \captionof{table}{Per-call Rössler RHS benchmark medians and allocations across implementation variants.}}
+
+  \vspace{0.75em}
+
+  \begin{tabular}{lrrrrrr}
+    \toprule
+    Variant & dt & nsteps & Median (ns) & Median (ms) & Allocs & Bytes \\
+    \midrule
+    naïve (alloc) & 0.01 & 20000 & 7.41e+06 & 7.41 & 640066 & 25603088 \\
+    oop (tuned) & 0.01 & 20000 & 7.31e+06 & 7.31 & 640066 & 25603088 \\
+    in-place (naïve) & 0.01 & 20000 & 2.03e+06 & 2.03 & 50 & 2624 \\
+    in-place (tuned) & 0.01 & 20000 & 1.88e+06 & 1.88 & 50 & 2624 \\
+    SVector (naïve) & 0.01 & 20000 & 1.64e+06 & 1.64 & 22 & 1504 \\
+    SVector (tuned) & 0.01 & 20000 & 1.46e+06 & 1.46 & 22 & 1504 \\
+    type-stable & 0.01 & 20000 & 8.27e+06 & 8.27 & 640066 & 25603088 \\
+    AD-ready & 0.01 & 20000 & 1.55e+06 & 1.55 & 22 & 1504 \\
+    \bottomrule
+  \end{tabular}
+  {\captionsetup{hypcap=false}%
+  \captionof{table}{Fixed-step RK4 solve benchmarks for $t \in [0,T]$ with step size $dt$; allocations reported per solve.}}
 \end{center}
+
+\medskip
+
+\noindent\textbf{Key observations.}
+\begin{itemize}
+  \item Tuned in-place RHS cuts per-call time roughly in half versus naïve out-of-place, and the stack-resident \texttt{SVector} versions are effectively allocation-free.
+  \item Solve-level allocations drop from $\approx6.4\times 10^5$ to a few dozen (or zero) once the RHS stops allocating, stabilizing runtimes across long horizons.
+  \item Fastest full solves come from the tuned \texttt{SVector} variant ($\sim5\times$ faster than baseline), closely followed by the AD-ready implementation that keeps allocations negligible.
+\end{itemize}
 
 \medskip
 \hrulefill
 \medskip
 
-% --- END MIDDLE COLUMN
 \switchcolumn
+%----------------------------------------------------------------------------------------
+% BEGIN: THIRD COLUMN
+%----------------------------------------------------------------------------------------
 
-% ---- TODO WHAT GOES HERE? --- Conclusion comes last
 %------------------------ Conclusion ------------------------
 \section*{Conclusion: Optimizing ODEs in Julia}
-
 \noindent
-Symbolic computation can automate derivations and optimizations that would otherwise
-be performed manually, improving both performance and reliability.  For example, the 
-Rössler system \eqref{eq:rossler} is linear in two unknowns and can be simplified by 
-substitution; \texttt{ModelingToolkit.jl} can automate this process and generates 
-optimized code for the resulting system.
+Experiment 1 confirms that tightening the RHS kernel delivers most of the speedup: moving from naïve allocation to tuned in-place or \texttt{SVector} code removes GC noise, shrinks solve time by $\sim5\times$, and keeps the solver stable across long trajectories.
 
 \medskip
 
-\noindent
-By carefully crafting our Julia implementation—using in-place updates, 
-static arrays and solver-aware techniques—we achieved C-like performance 
-without sacrificing code clarity.  Eliminating unnecessary allocations and 
-choosing the right data layout allow simulation code to scale up to large problems,
-be reused in future research and be shared confidently with the community.
+\noindent\textbf{Practical tips for fast RHS code.}
+\begin{itemize}
+  \item Write in-place updates for solver-friendly mutability; reserve allocations for setup, not per-step work.
+  \item Use \texttt{SVector} for very small systems to keep data on the stack; fall back to \texttt{Vector} for larger dimensions to avoid compile-time bloat.
+  \item Validate correctness, then add \texttt{@inbounds} and \texttt{@inline} to strip bounds checks and call overhead; keep arguments type-stable so the compiler can inline aggressively.
+\end{itemize}
 
 \medskip
 
-\noindent
-Choosing the right integrator is crucial: an explicit scheme is sufficient for 
-the non-stiff Rössler system, but implicit methods are necessary for stiff problems.
-The SciML ecosystem provides a rich set of tools for selecting and tuning the best 
-solver for your problem; don’t guess—measure with \texttt{BenchmarkTools.jl}!
-
+\noindent\textbf{Outlook.} The same kernel work carries to stiff problems and differentiation workflows; adding implicit integrators or adjoints next should reuse these allocation-free RHS variants without sacrificing performance.
 \medskip
 
 \noindent

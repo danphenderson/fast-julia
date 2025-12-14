@@ -1,97 +1,100 @@
-![Rössler System Animation](./rossler.gif) 
+![Rössler System Animation](./rossler.gif)
 
-
+*Figure 1 — Performance ladder for Rössler RHS variants (L0–L5).*
 ```mermaid
-mindmap
-  root(Solving Small System of ODEs)
-    IVP Specification
-      \newlines["`State & parameters
-        dimension n
-        parameters p
-        units/scales -->
-      `"]
-      \newlines["`Time domain
-        t0, tf
-        output times (saveat)`"]
-      \newlines["`IC x0 (and x0' if DAE)`"]
-      \newlines["`Model properties
-        smoothness of f
-        invariants/constraints (mass, positivity)
-        events/discontinuities`"]
-    Well-posedness checks
-      \newlines["`Existence & uniqueness (Picard–Lindelöf)
-        f locally Lipschitz in x
-      `"]
-      \newlines["`Domain validity
-        singularities / blow-up
-        parameter ranges
-      `"]
-      \newlines["`Scaling / nondimensionalization
-        reduce condition issues
-        balance magnitudes
-      `"]
-    Numerical method selection
-      \newlines["`Stiffness?
-        nonstiff: explicit RK (e.g., RK4 / Tsit5)
-        mildly stiff: stabilized explicit / IMEX
-        stiff: implicit (BDF, Rosenbrock, Radau)
-      `"]
-      \newlines["`Accuracy target
-        low/medium: fixed step
-        high: adaptive step + error control
-      `"]
-      \newlines["`Structure to exploit
-        Hamiltonian / symplectic: symplectic integrator
-        oscillatory: methods tuned for oscillations
-        large sparse: Jacobian sparsity + Krylov
-      `"]
-          \newlines["`Discretization details
-      Step size / tolerance
-        dt (fixed) OR reltol/abstol (adaptive)
-        maxiters, dtmin/dtmax
-      Error estimation
-        embedded pair
-        local truncation error
-      Jacobian handling (implicit)
-        analytic vs AD vs finite diff
-        factorization / preconditioner
-    `"]   
-    \newlines["`Implementation pipeline
-      Define f(t,x,p)
-        allocate-free / in-place
-        type stability
-      Choose solver + options
-        saveat / dense output
-        callbacks (events)
-      Run solve
-        check return code
-    `"]   
-    \newlines["`Validation & verification
-      Sanity checks
-        conservation / invariants
-        positivity / bounds
-      Convergence
-        refine dt or tighten tolerances
-        compare against reference solution
-      Sensitivity
-        vary parameters p
-        check qualitative stability
-    `"]   
-    \newlines["`Diagnostics & reporting
-      Plots
-        components vs t
-        phase portraits
-        norms / energy
-      Performance
-        allocations / profiling
-        stiffness indicators
-      Reproducibility
-        fixed seeds (if noise)
-        record solver/tols/version
-    `"]
+flowchart TB
+  %% Performance / “production-grade” ladder for Rössler RHS variants (increasing maturity/perf left→right)
+
+  A["L0: Baseline (naïve, out-of-place)<br/>rossler_naive(u,p,t)<br/>• allocates new Vector each call<br/>• bounds checks<br/>• simplest reference"]
+    --> B["L1: Bounds-check-free (out-of-place)<br/>rossler(u,p,t)<br/>• still allocates Vector<br/>• @inbounds / @inline<br/>• faster RHS, same API"]
+    --> C["L2: Allocation-free (in-place)<br/>rossler!(du,u,p,t)<br/>• no per-call heap allocation<br/>• preallocated du<br/>• standard SciML performance step"]
+    --> D["L3: Concrete eltype (type-stable OOP)<br/>rossler_type_stable(u,p,t)<br/>• allocates, but concrete eltype<br/>• robust under mixed types / AD<br/>• better compiler specialization"]
+    --> E["L4: Stack-resident tiny system (StaticArrays)<br/>rossler_static(u::SVector,p,t)<br/>• allocation-free<br/>• SVector in/out<br/>• best for very small state (3D)"]
+    --> F["L5: AD-ready + stack-resident<br/>rossler_ad(u::SVector,p::SVector,t)<br/>• allocation-free<br/>• explicit promote_type<br/>• forward-mode AD friendly"]
+
+  %% Side notes
+  B -.-> N1["Note: Out-of-place variants allocate by construction<br/>(useful for clarity / correctness baselines)"]
+  C -.-> N2["Note: In-place is the typical “production” RHS<br/>(minimizes GC pressure)"]
+  E -.-> N3["Note: StaticArrays often wins for tiny systems<br/>(stack/register temporaries; low overhead)"] --> 
+  F["L5: AD-ready + stack-resident\nrossler_ad(u::SVector,p::SVector,t)\n• allocation-free\n• explicit promote_type\n• forward-mode AD friendly"]
+
+  %% Optional side notes for the story
+  B --- N1["Note: Out-of-place variants allocate by construction\n(useful for clarity / correctness baselines)"]
+  C --- N2["Note: In-place is the typical 'production' RHS\n(minimizes GC pressure)"]
+  E --- N3["Note: StaticArrays often wins for very small systems\n(less overhead, stack/register temporaries)"]
 ```
 
+*Figure 2 — Mindmap of a practical small-ODE workflow (spec → method → validation → reporting).*
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#3ec0c5', 'primaryBorderColor': '#0a1d1eff', 'primaryTextColor': '#0f2f30', 'lineColor': '#0f2f30', 'fontFamily': 'Helvetica Neue, Arial, sans-serif'}} }%%
+mindmap
+  root((Fast Julia: Small ODE Workflow))
+    IVP setup
+      "State and parameters: small n, scaled units"
+      "Time window: t0 → tf, saveat grid"
+      "Model checks: smooth f, invariants, events"
+    Method choice
+      "Stiffness guide: explicit RK4 / stabilized / BDF"
+      "Accuracy target: fixed step vs adaptive tolerances"
+      "Structure to exploit: symplectic flows, sparsity, Jacobian plan"
+    Implementation
+      "Allocate-free RHS: in-place `f!(du,u,p,t)`"
+      "Type-stable inputs; promote eltypes"
+      "Tiny systems: `StaticArrays` to stay on the stack"
+    Validation
+      "Sanity: bounds, invariants, positivity"
+      "Convergence: refine dt or tolerances"
+      "Sensitivity: sweep parameters, watch qualitative stability"
+    Reporting
+      "Plots: components, phase portrait, norms"
+      "Performance: runtime plus allocations/GC"
+      "Reproducibility: solver/tols, seeds, versions"
+```
 
+## Experiment Specification
+
+*Figure 3 — Benchmark pipeline used in Experiment 1 (warmup → RHS microbench → solve sweep).*
+```mermaid
+flowchart TB
+  %% Matches run_experiment1(): warmup compile, RHS microbench once/variant, solve bench per (variant, dt)
+
+  S0["Experiment1Spec<br/>u0=[1,1,1], p=[0.1,0.1,14], tspan=(0,200)<br/>dt0=1e-2, halvings=6, warmup_steps=10"]
+    --> S1["dt_schedule(dt0, halvings)<br/>dts = [dt0, dt0/2, dt0/4, ...]"]
+
+  S1 --> S2["build_systems_for_experiment1(spec)<br/>Vector u0 for vector variants<br/>SVector u0 for static variants<br/>Optional rossler_ad if defined"]
+
+  S2 --> W["Warm-up compilation<br/>tw=(t0, t0 + warmup_steps*dts[1])<br/>solve_fixed_rk4(prob_warm, dts[1])"]
+
+  W --> R["RHS microbenchmark (dt-independent)<br/>bench_rhs(sys)<br/>• in-place: alloc du=similar(u)<br/>• out-of-place: call f(u,p,t)<br/>@benchmark ... samples=200 evals=1"]
+
+  W --> P["Full solve benchmarks (dt sweep)<br/>prob = make_prob(sys) on full tspan<br/>for dt in dts: bench_solve(prob; dt)<br/>@benchmark ... samples=20 seconds=1 evals=1"]
+
+  P --> K["RK4 fixed-step solve wrapper<br/>solve(prob, RK4(); dt=dt, ode_benchmark_solve_kwargs()...)<br/>minimal saving, dense=false, maxiters=1e12"]
+```
+
+*Figure 4 — RHS variant families and signatures used by the benchmark driver (Vector vs StaticArrays).*
+```mermaid
+flowchart LR
+  %% Matches build_systems_for_experiment1() variant list and impl.jl signatures.
+
+  subgraph V["Vector-based state (u::AbstractVector, p::AbstractVector)"]
+    A["L0: OOP baseline (alloc + bounds)<br/>rossler_naive(u,p,t)<br/>returns Vector"] 
+      --> B["L1: OOP + @inbounds/@inline (alloc)<br/>rossler(u,p,t)<br/>returns Vector"] 
+    B --> C0["L2a: In-place baseline (no heap alloc; may have bounds)<br/>rossler_naive!(du,u,p,t)<br/>writes du"] 
+      --> C1["L2b: In-place + @inbounds/@inline (no heap alloc)<br/>rossler!(du,u,p,t)<br/>writes du"]
+    B --> D["L3: OOP type-stable (alloc, promoted eltype)<br/>rossler_type_stable(u,p,t)<br/>returns Vector{promote_type(Tu,Tp)}"]
+  end
+
+  subgraph S["Static state (u::SVector{3}, params vary by variant)"]
+    E0["L4a: Static baseline (SVector output)<br/>rossler_static_naive(u,p,t)<br/>returns @SVector [...]"]
+      --> E1["L4b: Static + @inbounds/@inline (allocation-free)<br/>rossler_static(u::SVector{3}, p, t)<br/>returns SVector{3,T}"]
+    E1 --> F["L5: AD-ready static (allocation-free)<br/>rossler_ad(u::SVector{3}, p::SVector{3}, t)<br/>returns SVector{3,promote_type(Tu,Tp)}"]
+  end
+
+  %% Relationship between families
+  B -.-> E1["Switch u0 to SVector in Experiment 1"]
+  F -.-> N["Included only if rossler_ad is defined (conditional add)"]
+```
 # TODO.md
 
 ## Goal
@@ -102,28 +105,13 @@ Finish the poster with a single clear narrative: **small, production-grade code 
 ## 0) Resolve headline metric + claim consistency (blocker)
 Your current poster text claims a “tenfold speedup,” but the current Midpoint fixed-step results you’ve been working with (as reflected in your table/fig placeholders) do **not** obviously support 10× solve-time speedup. Decide which metric is headline and make the claim match computed numbers everywhere.
 
-- [ ] Choose the **headline metric** (pick exactly one):
-  - A) **Solve-time speedup** (end-to-end `solve` timing; likely smaller multipliers unless using ensemble / long horizon)
-  - B) **RHS throughput speedup** (per-call cost, allocations; often shows larger multipliers and matches “production lessons” best)
-- [ ] Choose **one** headline experiment spec (single source of truth), aligned to the headline metric:
-  - Recommended if A: fixed-step solve spec (Midpoint or RK4 fixed dt), output disabled
-  - Recommended if B: `bench_rhs` + allocation deltas front-and-center
-- [ ] Update **Abstract + Introduction** to reflect the computed headline number (remove “tenfold” until it is computed and verified).
-- [ ] Replace `\red{XX}` with a computed value from the generated table, not hand-edited text.
-
-**Acceptance criteria**
-- Poster claims (e.g., “10×”) match the computed headline number for the chosen experiment.
-- The headline number appears in **exactly two places** (Abstract + Introduction) and matches plotted data.
-
----
-
 ## 1) Lock scope and narrative (do first)
 - [x] Intro to Rössler; then illustrate out-of-place vs in-place updating in pass-by-reference language.
-- [ ] Add 2–3 poster-distance bullets explaining stack allocation (`StaticArrays`) and why allocations matter (GC pressure / throughput).
-- [ ] Add 2–3 poster-distance bullets explaining `@inbounds` / `@inline` as “remove bounds checks / encourage inlining,” and why that can matter in tight loops.
+- [x] Add 2–3 poster-distance bullets explaining stack allocation (`StaticArrays`) and why allocations matter (GC pressure / throughput).
+- [x] Add 2–3 poster-distance bullets explaining `@inbounds` / `@inline` as “remove bounds checks / encourage inlining,” and why that can matter in tight loops.
   - Keep it factual; avoid over-claiming compiler behavior.
 - [x] Confirmed: **performance ladder variants are already implemented in code** (benchmark driver constructs 8 variants).
-- [ ] Choose which **6–8 variants** you will actually show on the poster (recommend 6 for clarity):
+- [x] Choose which **6–8 variants** you will actually show on the poster (recommend 6 for clarity):
   - Suggested core ladder (6):
     1) `rossler_naive` (allocating)
     2) `rossler` (allocating + `@inbounds/@inline`)
@@ -134,8 +122,8 @@ Your current poster text claims a “tenfold speedup,” but the current Midpoin
   - Optional add-ons (only if they strengthen the story without clutter):
     - `rossler_type_stable`
     - `rossler_ad`
-- [ ] Define baseline and speedup formula (single choice, used everywhere):
-  - Baseline (recommended): `rossler_naive`
+- [x] Define baseline and speedup formula (single choice, used everywhere):
+  - Baseline: `rossler_naive`
   - Speedup: `median_time(baseline) / median_time(variant)`
 
 **Acceptance criteria**
@@ -149,17 +137,19 @@ Your current poster text claims a “tenfold speedup,” but the current Midpoin
   - RHS timing
   - Solve timing
   - allocations/bytes
-- [ ] Ensure the experiment uses consistent settings:
-  - fixed-step: `tspan`, `dt`, `saveat`/output disabling policy
-  - adaptive: tolerances (if included at all—prefer to omit for poster scope)
+- [ ] Ensure the experiment uses consistent settings and that `poster.tex` matches them exactly:
+  - fixed-step: `tspan`, `dt`, solver (RK4), output disabling policy
+  - (Avoid adaptive tolerances unless you explicitly add an adaptive experiment panel)
 - [ ] Document benchmark policy in one place (script header or poster “Experiment Spec” box):
   - warmup policy
   - `BenchmarkTools` configuration
   - whether output is disabled (e.g., `save_on=false`, `dense=false`, etc.)
+- [ ] Make the parameter story consistent in text:
+  - “canonical parameters” used for the attractor visualization vs. the benchmark parameters (currently these differ in `poster.tex`)
 
 **Acceptance criteria**
 - Running the benchmark script twice yields stable median ordering (minor variance acceptable).
-- Captions state: metric, baseline, units, and output policy.
+- Captions state: metric, baseline, units, solver spec, and output policy.
 
 ---
 
@@ -201,18 +191,19 @@ This script must:
 - [ ] Write all poster assets to: `./poster/figures/`
 - [ ] Produce **exactly the figures referenced by `poster.tex`** (no extra, no missing).
 
-### Minimum figure set (recommended)
-- [ ] **Figure A — Solve time bar chart**
-  - `midpoint_solve_times.png` or `rk4_solve_times.png`
-  - 6 variants preferred; log y-axis only if necessary
-- [ ] **Figure B — RHS time + allocations**
-  - Either combined figure or two:
-    - median RHS time
-    - allocations/bytes per RHS call (high impact)
-- [ ] **Figure C — Solution sanity check**
-  - Single 2D projection or 3D trajectory for one chosen variant/spec
+### Minimum figure set (updated to match your current poster intent)
+- [ ] **Figure A — Solve-time speedup (log scale)**
+  - Currently referenced as: `rk4_time_normalized_log10.png`
+  - Keep speedup definition consistent with captions.
+- [ ] **Figure B — Solve-time bar chart (normalized)**
+  - Create a second, distinct asset (do not reuse the same file twice).
+  - Update `poster.tex` to reference the new filename.
+- [ ] **Figure C — RHS + allocations**
+  - RHS median time + allocations/bytes per RHS call (combined or two panels).
+- [ ] **Figure D — Attractor / solution sanity check**
+  - Use this to satisfy the “Add Figure: Rössler attractor” placeholder in the Introduction.
 - [ ] Generate LaTeX table from data (avoid drift):
-  - `./poster/figures/midpoint_table.tex` (or rk4 equivalent)
+  - `./poster/figures/rk4_table.tex` (or a naming scheme you standardize)
 
 **Acceptance criteria**
 - One command regenerates all assets:
@@ -220,36 +211,6 @@ This script must:
 - `poster.tex` compiles without manual figure/table edits.
 - `poster.tex` uses `\input{./figures/<table>.tex}` rather than a hand-typed table.
 
----
-
-## 4) Replace fragile TikZ diagram with a stable included graphic
-- [ ] Remove large TikZ pipeline diagram block from `poster.tex`.
-- [ ] Replace with:
-  - `\includegraphics{./figures/pipeline_overview.(pdf|png)}`
-- [ ] Generate `pipeline_overview` via:
-  - Mermaid → SVG/PDF, or
-  - standalone TikZ compiled separately, or
-  - vector diagram tool of choice
-
-**Acceptance criteria**
-- Poster compiles reliably with fewer TikZ dependencies and faster iteration.
-
----
-
-## 5) Make poster code listings match the repository (no copy/paste drift)
-Current poster listings use generic names; repo distinguishes `rossler_naive` vs `rossler`, etc. Fix this to avoid conceptual and factual drift.
-
-- [ ] Replace hand-copied listings with `\lstinputlisting` slices from source files:
-  - `\lstinputlisting[firstline=..., lastline=...]{../rossler/impl.jl}`
-- [ ] Ensure the poster shows the *actual* ladder names used in benchmarks:
-  - `rossler_naive`, `rossler`, `rossler_naive!`, `rossler!`, `rossler_static_naive`, `rossler_static`, etc.
-- [ ] Keep snippets short: only what supports the ladder.
-
-**Acceptance criteria**
-- Code shown on the poster is identical to repo code (directly included from it).
-- Captions correctly describe allocation behavior of the shown function.
-
----
 
 ## 6) Content polish: make claims consistent and readable at poster distance
 - [ ] Replace placeholders (“XX-fold speedup”) with computed values.

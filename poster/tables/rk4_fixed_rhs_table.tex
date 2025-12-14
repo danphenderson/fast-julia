@@ -1,0 +1,14 @@
+\begin{tabular}{lrrrr}
+\toprule
+Variant & Median (ns) & Median (ms) & Allocs & Bytes \\
+\midrule
+naïve (alloc) & 42 & 4.2e-05 & 2 & 80 \\
+oop (tuned) & 42 & 4.2e-05 & 2 & 80 \\
+in-place (naïve) & 41 & 4.1e-05 & 0 & 0 \\
+in-place (tuned) & 20.5 & 2.05e-05 & 0 & 0 \\
+SVector (naïve) & 0.001 & 1e-09 & 0 & 0 \\
+SVector (tuned) & 0.001 & 1e-09 & 0 & 0 \\
+type-stable & 42 & 4.2e-05 & 2 & 80 \\
+AD-ready & 41 & 4.1e-05 & 0 & 0 \\
+\bottomrule
+\end{tabular}
