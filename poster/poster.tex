@@ -47,23 +47,27 @@ yield C-like performance while preserving code clarity.
 \begin{paracol}{3}
   \setcolumnwidth{0.28\textwidth,0.44\textwidth,0.28\textwidth}
 
+% BEGIN: Left Column
+%----------------------------------------------------------------------------------------
 %------------------------ INTRODUCTION ------------------------
 \section*{Introduction}
+\td{
+  \vspace{1in}
+
+  \textbf{Add Figure:} The Rössler attractor visualized for typical parameters (e.g. $a=0.2$, $b=0.2$, $c=5.7$). The system’s chaotic trajectory in phase space will be integrated with a fixed-step RK4 solver.
+  
+  \vspace{1in}
+}
 
 \noindent
 ODE workflows often involve ensembles: many solves across parameters, initial conditions,
-or time horizons. In that regime, per-call overhead in the SciML RHS
-$f!(\vu, \vx, \vp, t)$—especially allocations—dominates and can make otherwise
-simple experiments impractically slow.”
+or long time horizons. In that regime, per-call overhead to the ODE model function
+—especially allocations—dominates and can make otherwise simple experiments impractically slow.
 
 \medskip
 
 \noindent
-Targeted changes to model code-—in-place updates, type stability, and
-stack-vs.-heap allocations, etc. combined with the right choice of solver can
-yield order-of-magnitude speedups while keeping the code readable and
-extensible. In our case, we achieve a \red{XX} speedup from a naïve to an 
-optimized Julia implementation of the Rössler ODE system:
+The Rössler ODE system is defined as
 \begin{flalign*}
   \tag{Rössler} \label{eq:rossler}
   \quad \vx'(t) = \vf(\vx,\, \vp, \, t) = 
@@ -77,14 +81,59 @@ optimized Julia implementation of the Rössler ODE system:
     \vp = (a, \, b, \, c)^\top \text{ (parameters)} 
   \end{cases*}, &&
 \end{flalign*}
+where cononical paramters are $a=0.2$, $b=0.2$, $c=5.7$.
+The \ref{eq:rossler} system is non-stiff and exhibits chaotic dynamics, making it suitable
+benchmark problem for ODE solvers. Numerical integration is done with the classical 4th-order Runge-Kutta (RK4) method - an explicit
+solver with $4$-stages, leading to 4 evaluations of $\vf$ at each fixed step. We seek $\vx(t)$ for $t \in [0, T]$ subject
+to IC $\vx_0=(1, 1, 1)$ and paramters $\vp=(0.1, 0.1, 15.7)$.
 
 \medskip
 
 \noindent
-We seek $\vx(t)$ for all $t \in [t_0, t_f]$ subject to the initial condition $\vx(t_0)=\vx_0$, with fixed
-parameters $\vp$. ``Production'' performance is achieved using \texttt{DifferentialEquations.jl} from the SciML
-ecosystem \cite{DifferentialEquations.jl-2017}, building on the SciML techniques
-\cite{SciMLTutorial} for optimizing the model code $\vf$.
+The goal is to achieve the fastest possible integration time for this system, while mainting code clarity.
+C-like performance is achieved using \texttt{DifferentialEquations.jl}~\cite{DifferentialEquations.jl-2017}
+from the SciML ecosystem, utilizing documented techniques for optimizing the model code $\vf$
+[\cite{SciMLTutorial}, \cite{DiffEqDocsFasterODEExample} \red{Add other ref related to optimizing
+julia ODE model code goes here}
+].
+
+\medskip
+
+\noindent
+\subsection*{Computational Cost:} RK4 advances $\vx_n \approx \vx(t_n) \text{ via } \vx_{n+1} = \vx_n + \frac{h}{6} (k_1 + 2k_2 + 2k_3 + k_4)$.
+The primary cost at each stage, $k_1,\ldots,k_4$, $\vf$ is evaluating $\vf$ at an intermediate point;
+dependent on the previous stage. For a total simulation time $T$ and step size $h$, the number of steps
+is $N=T/h$. So, the tolal floating-point
+
+\medskip
+\hrulefill
+\medskip
+
+%------------------------ Bottom Column Visual  ------------------------
+\td{
+  \vspace{2in}
+
+  \textbf{Add Results Table.}
+  
+  \textbf{Add Addional Figure -- E.g. Pipeline figure, ODE Solving Mermaid 
+  MindMap.} The Rössler attractor visualized for typical parameters (e.g.
+  $a=0.2$, $b=0.2$, $c=5.7$). The system’s chaotic trajectory in phase space will be integrated with a fixed-step RK4 solver.
+  
+  \vspace{2in}
+}
+
+\switchcolumn
+% END: Left Column
+%----------------------------------------------------------------------------------------
+
+\medskip
+
+\noindent
+
+\medskip
+
+\noindent
+
 
 \medskip
 
@@ -174,8 +223,7 @@ function rossler_static(u, p, t)
 end
 \end{lstlisting}
 \end{minipage}
-% --- END FIRST COLUMN
-\switchcolumn
+
 
 % ------------------------ Middle Column ------------------------
 
