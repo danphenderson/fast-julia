@@ -27,7 +27,8 @@
 \begin{minipage}[t]{0.40\textwidth}\vspace{0pt}
 {\Large\textbf{Abstract}}
 {\normalsize
-We benchmark naïve and optimized Julia implementations for solving small to moderate systems of ODEs, $\vx'(t) = \vf(\vx,\vp,t)$, focusing on the 3D Rössler system as a case study. We demonstrate how to assess and resolve performance bottlenecks with targeted changes—in-place updates and type-stable code—while preserving clarity. Benchmarks for a fixed-step RK4 solve show that tuned in-place or static-array variants cut runtime by $\approx4$--$5\times$ and reduce allocations from $\sim6.4\times 10^5$ per solve to a few dozen compared to the naïve baseline.}
+We benchmark naïve and optimized Julia kernal implementations of the right-hand-side of $\vx'(t) = \vf(\vx,\vp,t)$, using the 3D Rössler system as a case study.
+Benchmarks show that tuned in-place or static-array variants cut runtime by $\approx4$--$5\times$ and reduce allocations from $\sim6.4\times 10^5$ per solve to a few dozen compared to the naïve baseline.}
 \end{minipage}
 }
 
@@ -48,14 +49,11 @@ We benchmark naïve and optimized Julia implementations for solving small to mod
 
 \noindent
 ODE workflows often involve ensembles: many solves across parameters, initial conditions,
-or long time horizons. In that regime, per-call overhead to the ODE model function
-—especially allocations—dominates and can make otherwise simple experiments impractically slow.
-
-\medskip
-
-\noindent
-The Rössler ODE system is defined as
-\begin{flalign*}
+or long time horizons. In that regime, per-call overhead in the ODE right-hand side
+(RHS) function---especially heap allocations---can dominate runtime and make otherwise
+simple experiments impractically slow.
+We explore techniques to accelerate classical Runge-Kutta (RK4) integration on the Rössler ODE system
+\begin{flalign}
   \tag{Rössler} \label{eq:rossler}
   \quad \vx'(t) = \vf(\vx,\, \vp, \, t) = 
   \vect{
@@ -67,29 +65,13 @@ The Rössler ODE system is defined as
     \vx = (x_1, \, x_2, \, x_3)^\top \text{ (state variables)}\\
     \vp = (a, \, b, \, c)^\top \text{ (parameters)} 
   \end{cases*}, &&
-\end{flalign*}
-
-\noindent
-where the canonical Rössler parameters are $a=0.2$, $b=0.2$, $c=5.7$.
-The system~\eqref{eq:rossler} is non-stiff and exhibits chaotic dynamics, making it a
-standard benchmark problem for ODE solvers.
-where canonical parameters are $a=0.2$, $b=0.2$, $c=5.7$.
-
-\medskip
-
-\noindent
-For benchmarking purposes, we fix $\vx_0=(1,1,1)$ and choose
-$\vp=(0.1,\,0.1,\,15.7)$, which yields representative dynamics while avoiding
-stiffness. All experiments integrate~\eqref{eq:rossler} over $t \in [0,T]$
-using classical fixed-step RK4.
-
-\medskip
-
-\noindent
-The goal is to achieve the fastest possible integration time for this system, while maintaining code clarity.
-High performance can be achieved using \texttt{DifferentialEquations.jl}~\cite{DifferentialEquations.jl-2017}
-from the SciML ecosystem, utilizing documented techniques for optimizing the model code $\vf$
-[\cite{SciMLTutorial}, \cite{DiffEqDocsFasterODEExample}].
+\end{flalign}
+where the canonical parameters are $a=0.2$, $b=0.2$, $c=5.7$.
+During benchmarking, we fix initial condition $\vx_0=(1,1,1)$ and use the canonical parameters above.
+All experiments integrate~\eqref{eq:rossler} over $t \in [0,T]$ using classical fixed-step RK4.
+Experiments demonstrate C-like performance is achievable using \texttt{DifferentialEquations.jl}~\cite{DifferentialEquations.jl-2017}
+from the SciML ecosystem, following documented techniques for optimizing the model RHS $\vf$
+\cite{SciMLTutorial,DiffEqDocsFasterODEExample}.
 
 \medskip
 
@@ -106,7 +88,7 @@ and the CPU scales linearly. The linear scaling of RK4 is a key expectation veri
 
 \subsection*{Heap vs. Stack Allocation} 
 In Julia, the ``allocations'' reported by \texttt{@time} and \texttt{BenchmarkTools.jl} are heap allocations, 
-which are costly because they introduce pointer indirection and add work for the garbage collector. By
+which are costly because they introduce pointer indirection and add work for the garbage collector (GC). By
 contrast, fixed-size temporaries whose layout is known at compile time can usually be stored inline and
  kept off the heap (in a stack frame or registers), making their creation essentially free. Here, 
  ``stack allocation'' is used loosely to mean ``no heap allocation''—Julia does not directly report 
@@ -120,7 +102,7 @@ contrast, fixed-size temporaries whose layout is known at compile time can usual
 
 %------------------------ Bottom Column Visual  ------------------------
 \begin{mdframed}[backgroundcolor=gray!10]
-\textbf{Experiment 1 setup.} Classical RK4 with $h=0.01$ for $T=200$ ($n_\text{steps}=20{,}000$), IC $(1,1,1)$, parameters $(0.1,0.1,15.7)$. Variants: naïve allocating RHS, tuned out-of-place, naïve/tuned in-place, \texttt{SVector} naïve/tuned, type-stable, and AD-ready.
+\textbf{Experiment 1 setup.} Classical RK4 with step size $h=0.01$ for $T=200$, so $n_\text{steps}=T/h=20{,}000$. IC $(1,1,1)$, parameters $(0.2,0.2,5.7)$. Variants: naïve allocating right-hand side (RHS), tuned out-of-place, naïve/tuned in-place, \texttt{SVector} naïve/tuned, type-stable, and automatic-differentiation (AD)-ready.
 
 \medskip
 \textbf{Metrics.} Benchmarks use \texttt{BenchmarkTools.jl}; we report median wall-clock time and heap allocations for (a) a single RHS call and (b) a full RK4 solve. Allocation-free entries indicate no heap allocation (stack/register temporaries).
@@ -173,7 +155,7 @@ the lowered code to understand the impact of these changes.
 \begin{minipage}{\linewidth}
 \centering
 \begin{minipage}[t]{0.475\linewidth} % Left figure
-  \includegraphics[width=0.95\linewidth]{rk4_fixed_speedup_solve_log10.png}
+  \includegraphics[width=0.95\linewidth]{rk4_fixed_speedup_solve.png}
   {\captionsetup{hypcap=false}%
   \captionof{figure}{Experiment 1 speedup for fixed-step RK4 solves relative to the naïve out-of-place baseline `rossler\_naive`, using $\text{speedup}=\mathrm{median\_time}(\texttt{rossler\_naive})/\mathrm{median\_time}(\text{variant})$.}}
 \end{minipage}
@@ -189,55 +171,25 @@ the lowered code to understand the impact of these changes.
 
 \begin{table}[ht]
 \centering
-\resizebox{0.8\linewidth}{!}{%
-  \begin{tabular}{lrrrr}
-    \toprule
-    Variant & Median (ns) & Median (ms) & Allocs & Bytes \\
-    \midrule
-    naïve (alloc) & 42 & 4.2e-05 & 2 & 80 \\
-    oop (tuned) & 42 & 4.2e-05 & 2 & 80 \\
-    in-place (naïve) & 41 & 4.1e-05 & 0 & 0 \\
-    in-place (tuned) & 20.5 & 2.05e-05 & 0 & 0 \\
-    SVector (naïve) & 0.001 & 1e-09 & 0 & 0 \\
-    SVector (tuned) & 0.001 & 1e-09 & 0 & 0 \\
-    type-stable & 42 & 4.2e-05 & 2 & 80 \\
-    AD-ready & 41 & 4.1e-05 & 0 & 0 \\
-    \bottomrule
-  \end{tabular}
-}
-\caption{Per-call Rössler RHS benchmark medians and allocations across implementation variants.}
+\resizebox{0.8\linewidth}{!}{\input{tables/rk4_fixed_rhs_table.tex}}
+\caption{Per-call Rössler RHS benchmark medians (ns) and heap allocations across implementation variants.}
 \end{table}
 
 \vspace{1em}
 
 \begin{table}[ht]
 \centering
-\resizebox{0.8\linewidth}{!}{%
-  \begin{tabular}{lrrrrrr}
-    \toprule
-    Variant & dt & nsteps & Median (ns) & Median (ms) & Allocs & Bytes \\
-    \midrule
-    naïve (alloc) & 0.01 & 20000 & 7.41e+06 & 7.41 & 640066 & 25603088 \\
-    oop (tuned) & 0.01 & 20000 & 7.31e+06 & 7.31 & 640066 & 25603088 \\
-    in-place (naïve) & 0.01 & 20000 & 2.03e+06 & 2.03 & 50 & 2624 \\
-    in-place (tuned) & 0.01 & 20000 & 1.88e+06 & 1.88 & 50 & 2624 \\
-    SVector (naïve) & 0.01 & 20000 & 1.64e+06 & 1.64 & 22 & 1504 \\
-    SVector (tuned) & 0.01 & 20000 & 1.46e+06 & 1.46 & 22 & 1504 \\
-    type-stable & 0.01 & 20000 & 8.27e+06 & 8.27 & 640066 & 25603088 \\
-    AD-ready & 0.01 & 20000 & 1.55e+06 & 1.55 & 22 & 1504 \\
-    \bottomrule
-  \end{tabular}
-}
-\caption{Fixed-step RK4 solve benchmarks for $t \in [0,T]$ with step size $h$; allocations reported per solve.}
+\resizebox{0.8\linewidth}{!}{\input{tables/rk4_fixed_solve_table.tex}}
+\caption{Fixed-step RK4 solve benchmarks for $t \in [0,T]$ with step size $h$; heap allocations reported per solve.}
 \end{table}
 
 \medskip
 
 \noindent\textbf{Key observations.}
 \begin{itemize}
-  \item Tuned in-place RHS cuts per-call time roughly in half versus naïve out-of-place, and the \texttt{SVector} versions avoid heap allocation and are effectively allocation-free.
-  \item Solve-level allocations drop from $\approx6.4\times 10^5$ to a few dozen (or zero) once the RHS stops allocating, stabilizing runtimes across long horizons.
-  \item Fastest full solves come from the tuned \texttt{SVector} variant ($\sim5\times$ faster than baseline), closely followed by the AD-ready implementation that keeps allocations negligible.
+  \item In-place and \texttt{SVector} RHS variants eliminate per-call heap allocations; solve-level allocations drop from $\approx6.4\times 10^5$ to a few dozen, reducing GC overhead.
+  \item Removing RHS allocations yields multi-$\times$ speedups for full RK4 solves at fixed $h$, since ensembles and long horizons amplify per-call overhead.
+  \item Fastest full solves come from the tuned \texttt{SVector} variant, closely followed by the AD-ready implementation that keeps allocations negligible.
 \end{itemize}
 
 \medskip
@@ -249,7 +201,7 @@ the lowered code to understand the impact of these changes.
 % BEGIN: THIRD COLUMN
 %----------------------------------------------------------------------------------------
 %------------------------ Conclusion ------------------------
-\section*{Performance ladder for Rössler RHS variants (L0–L5).}
+\section*{Optimization ladder for Rössler RHS variants (L0–L5).}
 
 \medskip
 \hrulefill
@@ -275,7 +227,7 @@ Experiment 1 confirms that tightening the RHS kernel delivers most of the speedu
 \textbf{Practical tips for fast RHS code.}
 \begin{itemize}
   \item Write in-place updates for solver-friendly mutability; reserve allocations for setup, not per-step work.
-  \item Use \texttt{SVector} for very small systems to keep data off the heap; fall back to \texttt{Vector} for larger dimensions to avoid compile-time bloat.
+  \item Use \texttt{SVector} for very small systems (roughly $n \lesssim 16$--$32$ states) to keep data off the heap; fall back to \texttt{Vector} for larger dimensions to avoid compile-time bloat.
   \item Validate correctness, then add \texttt{@inbounds} and \texttt{@inline} to strip bounds checks and call overhead; keep arguments type-stable so the compiler can inline aggressively.
 \end{itemize}
 

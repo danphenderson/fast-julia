@@ -1,20 +1,22 @@
 # rossler/impl.jl
 
-# Rössler system implementations with explicit in-bounds checks.
-# This file defines multiple variants of the Rössler right‑hand side.
-# - `rossler`: naive out-of-place implementation returning a new `Vector`.
-# - `rossler!`: in-place implementation writing into a preallocated `du`.
-# - `rossler_static`: stack-allocated variant returning an `SVector`.
-# - `rossler_type_stable`: type-stable out-of-place implementation that promotes
-#    state and parameter element types and returns a new `Vector` with promoted element type.
-# - `rossler_ad`: AD-friendly and allocation-free variant that operates on
-#    `SVector` state and `SVector` parameters and returns an `SVector`.
-#
-# All methods are annotated with `@inline` and `@inbounds` to eliminate
-# bounds checks and encourage the Julia compiler to inline tiny functions.
-#
-# These definitions live in a separate file so they can be easily included
-# by both the benchmarking driver and any analysis scripts.
+"""
+Rössler system implementations with explicit in-bounds checks.
+This file defines multiple variants of the Rössler right‑hand side.
+- `rossler`: naive out-of-place implementation returning a new `Vector`.
+- `rossler!`: in-place implementation writing into a preallocated `du`.
+- `rossler_static`: stack-allocated variant returning an `SVector`.
+- `rossler_type_stable`: type-stable out-of-place implementation that promotes
+   state and parameter element types and returns a new `Vector` with promoted element type.
+- `rossler_ad`: AD-friendly and allocation-free variant that operates on
+   `SVector` state and `SVector` parameters and returns an `SVector`.
+
+All methods are annotated with `@inline` and `@inbounds` to eliminate
+bounds checks and encourage the Julia compiler to inline tiny functions.
+
+These definitions live in a separate file so they can be easily included
+by both the benchmarking driver and any analysis scripts.
+"""
 
 using StaticArrays
 

@@ -30,15 +30,16 @@ using Plots
 # -----------------------------------------------------------------------------
 
 const DEFAULT_DPI = 300
-const DEFAULT_FIGSIZE = (1100, 650)
+const DEFAULT_FIGSIZE = (1200, 820)
 
 # Poster-friendly plot defaults
 default(
     dpi = DEFAULT_DPI,
-    titlefontsize = 16,
-    guidefontsize = 14,
-    tickfontsize = 12,
-    legendfontsize = 10,
+    # Poster readability: prioritize large, legible text.
+    titlefontsize = 26,
+    guidefontsize = 22,
+    tickfontsize = 18,
+    legendfontsize = 16,
 )
 
 # -----------------------------------------------------------------------------
@@ -216,18 +217,21 @@ function _hbar(labels::Vector{String}, values::Vector{<:Real};
     title::AbstractString,
     xscale::Symbol = :identity,
 )
+    y = collect(1:length(labels))
     bar(
-        labels,
-        values;
+        y,
+        Float64.(values);
         orientation = :h,
         xlabel = xlabel,
         ylabel = "",
+        yticks = (y, labels),
+        yflip = true,
         title = title,
         legend = false,
         xscale = xscale,
         size = DEFAULT_FIGSIZE,
-        left_margin = 8Plots.mm,
-        bottom_margin = 8Plots.mm,
+        left_margin = 20Plots.mm,
+        bottom_margin = 12Plots.mm,
         grid = :x,
     )
 end
@@ -266,7 +270,7 @@ function plot_solver_speedup(
     variants::Vector{String},
     baseline::AbstractString,
     metric_label::AbstractString,
-    xscale::Symbol = :log10,
+    xscale::Symbol = :identity,
 )
     # baseline preference: rossler_naive
     base_rows = df_slice[df_slice.variant .== baseline, :]
@@ -318,10 +322,23 @@ function plot_solver_allocs(
     labels = reverse(labels)
     allocs = reverse(allocs)
 
-    return _hbar(labels, allocs;
-        xlabel = "allocations per call",
+    unit = metric_label == "solve" ? "solve" : "call"
+
+    xlabel = "allocations per $(unit)"
+    values = allocs
+    xscale_plot = :identity
+    if xscale == :log10
+        # Plots.jl horizontal bar + xscale=:log10 can render poorly; instead plot log10-values explicitly.
+        values = log10.(allocs)
+        xlabel = "log10 allocations per $(unit)"
+    else
+        xscale_plot = xscale
+    end
+
+    return _hbar(labels, values;
+        xlabel = xlabel,
         title = "$(solver): allocations ($(metric_label))",
-        xscale = xscale,
+        xscale = xscale_plot,
     )
 end
 
@@ -434,7 +451,12 @@ function make_latex_table(
     metric::Symbol,
     variants::Vector{String},
 )
-    cols = ["Variant", "Median (ns)", "Median (ms)"]
+    cols = ["Variant"]
+    if metric == :rhs
+        push!(cols, "Median (ns)")
+    else
+        push!(cols, "Median (ms)")
+    end
 
     has_allocs = hasproperty(df_slice, :allocs) && !all(ismissing, df_slice.allocs)
     has_mem    = hasproperty(df_slice, :memory) && !all(ismissing, df_slice.memory)
@@ -448,10 +470,10 @@ function make_latex_table(
         insert!(cols, has_dt ? 3 : 2, "nsteps")
     end
     if has_allocs
-        push!(cols, "Allocs")
-        push!(cols, "Bytes")
+        push!(cols, metric == :rhs ? "Allocs/call" : "Allocs/solve")
+        push!(cols, metric == :rhs ? "Bytes/call" : "Bytes/solve")
     elseif has_mem
-        push!(cols, "Bytes")
+        push!(cols, metric == :rhs ? "Bytes/call" : "Bytes/solve")
     end
 
     io = IOBuffer()
@@ -482,8 +504,11 @@ function make_latex_table(
             push!(parts, ns isa Missing ? "--" : string(Int(ns)))
         end
 
-        push!(parts, _fmt_float(r0.median_time_ns))
-        push!(parts, _fmt_float(r0.time_ms))
+        if metric == :rhs
+            push!(parts, _fmt_float(r0.median_time_ns))
+        else
+            push!(parts, _fmt_float(r0.time_ms))
+        end
 
         if has_allocs
             a = r0.allocs
@@ -536,14 +561,15 @@ function make_all_figures(
 
         # Figures
         if nrow(solve) > 0
-            p_speed = plot_solver_speedup(solve; solver=solver, variants=variants, baseline=baseline, metric_label="solve", xscale=:log10)
-            savefig(p_speed, joinpath(outdir, "$(tag)_speedup_solve_log10.png"))
+            p_speed = plot_solver_speedup(solve; solver=solver, variants=variants, baseline=baseline, metric_label="solve", xscale=:identity)
+            savefig(p_speed, joinpath(outdir, "$(tag)_speedup_solve.png"))
 
             p_solve = plot_solver_times_ms(solve; solver=solver, variants=variants, metric_label="solve")
             savefig(p_solve, joinpath(outdir, "$(tag)_solve_times_ms.png"))
 
             if hasproperty(solve, :allocs) && !all(ismissing, solve.allocs)
-                p_alloc_solve = plot_solver_allocs(solve; solver=solver, variants=variants, metric_label="solve")
+                # log scale makes low-allocation variants visible next to 10^5-scale baselines
+                p_alloc_solve = plot_solver_allocs(solve; solver=solver, variants=variants, metric_label="solve", xscale=:log10)
                 savefig(p_alloc_solve, joinpath(outdir, "$(tag)_allocs_solve.png"))
             end
         end
@@ -585,7 +611,7 @@ function make_all_figures(
 
         # Poster compatibility filenames
         if poster_compat && occursin(r"(?i)rk4", solver)
-            src = joinpath(outdir, "$(tag)_speedup_solve_log10.png")
+            src = joinpath(outdir, "$(tag)_speedup_solve.png")
             isfile(src) && cp(src, joinpath(outdir, "rk4_time_normalized_log10.png"); force=true)
 
             src2 = joinpath(outdir, "$(tag)_allocs_solve.png")

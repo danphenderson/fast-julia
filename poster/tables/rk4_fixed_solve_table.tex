@@ -1,14 +1,14 @@
-\begin{tabular}{lrrrrrr}
+\begin{tabular}{lrrrrr}
 \toprule
-Variant & dt & nsteps & Median (ns) & Median (ms) & Allocs & Bytes \\
+Variant & dt & nsteps & Median (ms) & Allocs/solve & Bytes/solve \\
 \midrule
-naïve (alloc) & 0.01 & 20000 & 7.41e+06 & 7.41 & 640066 & 25603088 \\
-oop (tuned) & 0.01 & 20000 & 7.31e+06 & 7.31 & 640066 & 25603088 \\
-in-place (naïve) & 0.01 & 20000 & 2.03e+06 & 2.03 & 50 & 2624 \\
-in-place (tuned) & 0.01 & 20000 & 1.88e+06 & 1.88 & 50 & 2624 \\
-SVector (naïve) & 0.01 & 20000 & 1.64e+06 & 1.64 & 22 & 1504 \\
-SVector (tuned) & 0.01 & 20000 & 1.46e+06 & 1.46 & 22 & 1504 \\
-type-stable & 0.01 & 20000 & 8.27e+06 & 8.27 & 640066 & 25603088 \\
-AD-ready & 0.01 & 20000 & 1.55e+06 & 1.55 & 22 & 1504 \\
+naïve (alloc) & 0.01 & 20000 & 9.87 & 640066 & 25603088 \\
+oop (tuned) & 0.01 & 20000 & 9.58 & 640066 & 25603088 \\
+in-place (naïve) & 0.01 & 20000 & 2.06 & 50 & 2624 \\
+in-place (tuned) & 0.01 & 20000 & 1.79 & 50 & 2624 \\
+SVector (naïve) & 0.01 & 20000 & 1.58 & 22 & 1504 \\
+SVector (tuned) & 0.01 & 20000 & 1.57 & 22 & 1504 \\
+type-stable & 0.01 & 20000 & 9.71 & 640066 & 25603088 \\
+AD-ready & 0.01 & 20000 & 1.7 & 22 & 1504 \\
 \bottomrule
 \end{tabular}

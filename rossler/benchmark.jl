@@ -62,10 +62,19 @@ function bench_rhs(sys::ODESys; samples::Int=200, evals::Int=1)
     if isinplace(sys)
         du = similar(u)
         f(du, u, p, t)  # warm-up
-        return @benchmark $f($du, $u, $p, $t) samples=samples evals=evals
+        # Use Ref-indirection to avoid constant-folding / dead-code elimination in microbenchmarks.
+        duR = Ref(du)
+        uR  = Ref(u)
+        pR  = Ref(p)
+        tR  = Ref(t)
+        return @benchmark $f($duR[], $uR[], $pR[], $tR[]) samples=samples evals=evals
     else
         f(u, p, t)      # warm-up
-        return @benchmark $f($u, $p, $t) samples=samples evals=evals
+        # Use Ref-indirection to avoid constant-folding (important for pure/static RHS variants).
+        uR = Ref(u)
+        pR = Ref(p)
+        tR = Ref(t)
+        return @benchmark $f($uR[], $pR[], $tR[]) samples=samples evals=evals
     end
 end
 
@@ -81,7 +90,7 @@ end
 # -----------------------------
 Base.@kwdef struct Experiment1Spec{U,P}
     u0::U = [1.0, 1.0, 1.0]
-    p::P  = [0.1, 0.1, 14.0]
+    p::P  = [0.2, 0.2, 5.7]
     tspan::Tuple{Float64,Float64} = (0.0, 200.0)
 
     dt0::Float64 = 1e-2
