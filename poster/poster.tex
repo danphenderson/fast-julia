@@ -17,14 +17,14 @@
 \renewcommand{\arraystretch}{1.05}%
 
 \noindent
-\begin{minipage}[t]{0.3\textwidth}
+\begin{minipage}[t]{0.33\textwidth}
   {\Huge\bfseries\color{PMS310C} Fast Julia}\\[1ex]
   {\Large\itshape Optimizing Dense ODE Systems}\\[2ex]
   {\large Daniel Henderson}\\
   {\normalsize Michigan Technological University}\\
   {\small\ttfamily dphender@mtu.edu}
 \end{minipage}%
-\begin{minipage}[t]{0.5\textwidth}\vspace{0pt}
+\begin{minipage}[t]{0.40\textwidth}\vspace{0pt}
 {\Large\textbf{Abstract}}
 {\normalsize
 We benchmark naïve and optimized Julia implementations for solving small to moderate systems of ODEs, $\vx'(t) = \vf(\vx,\vp,t)$, focusing on the 3D Rössler system as a case study. We demonstrate how to assess and resolve performance bottlenecks with targeted changes—in-place updates and type-stable code—while preserving clarity. Benchmarks for a fixed-step RK4 solve show that tuned in-place or static-array variants cut runtime by $\approx4$--$5\times$ and reduce allocations from $\sim6.4\times 10^5$ per solve to a few dozen compared to the naïve baseline.}
@@ -45,17 +45,6 @@ We benchmark naïve and optimized Julia implementations for solving small to mod
 % BEGIN: LEFT COLUMN
 %----------------------------------------------------------------------------------------
 \section*{Introduction}
-
-\noindent
-\begin{center}
-  \includegraphics[width=0.9\linewidth]{pipeline_placeholder.pdf}
-  {\captionsetup{hypcap=false}%
-  \captionof{figure}{Experiment 1 pipeline: define Rössler RHS variants, integrate with fixed-step RK4, and benchmark runtime/allocations for both the RHS call and full solve.}}
-\end{center}
-
-\medskip
-\hrulefill
-\medskip
 
 \noindent
 ODE workflows often involve ensembles: many solves across parameters, initial conditions,
@@ -104,7 +93,8 @@ from the SciML ecosystem, utilizing documented techniques for optimizing the mod
 
 \medskip
 
-\subsection*{Computational Cost:} RK4 advances $\vx_n \approx \vx(t_n) \text{ via } \vx_{n+1} = \vx_n + \frac{h}{6} (k_1 + 2k_2 + 2k_3 + k_4)$.
+\subsection*{Computational Cost}
+RK4 advances $\vx_n \approx \vx(t_n) \text{ via } \vx_{n+1} = \vx_n + \frac{h}{6} (k_1 + 2k_2 + 2k_3 + k_4)$.
 The variable cost at stages $k_1,\ldots,k_4$ is evaluating $\vf$ at intermediate points;
 which depend on the previous stage. Thus, the total flop count for final simulation time $T$ and step size $h$
 is $O(N)$, where $N=T/h$ is the total number of steps. Therefore, halving the step size (thereby doubling $N$)
@@ -139,11 +129,7 @@ contrast, fixed-size temporaries whose layout is known at compile time can usual
 \textbf{Why it matters.} Ensembles and long horizons magnify per-call overhead. Tightening the RHS kernel pays dividends across every solver step and parameter sweep.
 \end{mdframed}
 
-\switchcolumn
 
-%----------------------------------------------------------------------------------------
-% BEGIN: MIDDLE COLUMN
-%----------------------------------------------------------------------------------------
 \section*{Experiment 1: Optimizing the Rössler ODE System}
 
 \noindent
@@ -156,7 +142,14 @@ of the \eqref{eq:rossler} system, together with a type-stable fixed/static-size 
 \end{itemize}
 
 \medskip
+\hrulefill
+\medskip
 
+\switchcolumn
+
+%----------------------------------------------------------------------------------------
+% BEGIN: MIDDLE COLUMN
+%----------------------------------------------------------------------------------------
 \noindent\textbf{Performance ladder highlights.}
 \begin{itemize}
   \item \texttt{StaticArrays} keep the three-state RHS off the heap, reducing GC noise.
@@ -172,9 +165,6 @@ of the \eqref{eq:rossler} system, together with a type-stable fixed/static-size 
 We optimize each implementation using macros \texttt{@inbounds}, \texttt{@inline}, and we see
 the lowered code to understand the impact of these changes.
 
-\medskip
-\hrulefill
-\medskip
 
 \subsection*{Results and Analysis}
 
@@ -193,8 +183,13 @@ the lowered code to understand the impact of these changes.
   {\captionsetup{hypcap=false}%
   \captionof{figure}{Allocations per RK4 solve. In-place and \texttt{SVector} variants eliminate heap traffic, enabling predictable runtimes across long integrations.}}
 \end{minipage}
+
+\medskip
 \end{minipage}
-\begin{center}
+
+\begin{table}[ht]
+\centering
+\resizebox{0.8\linewidth}{!}{%
   \begin{tabular}{lrrrr}
     \toprule
     Variant & Median (ns) & Median (ms) & Allocs & Bytes \\
@@ -209,11 +204,15 @@ the lowered code to understand the impact of these changes.
     AD-ready & 41 & 4.1e-05 & 0 & 0 \\
     \bottomrule
   \end{tabular}
-  {\captionsetup{hypcap=false}%
-  \captionof{table}{Per-call Rössler RHS benchmark medians and allocations across implementation variants.}}
+}
+\caption{Per-call Rössler RHS benchmark medians and allocations across implementation variants.}
+\end{table}
 
-  \vspace{0.75em}
+\vspace{1em}
 
+\begin{table}[ht]
+\centering
+\resizebox{0.8\linewidth}{!}{%
   \begin{tabular}{lrrrrrr}
     \toprule
     Variant & dt & nsteps & Median (ns) & Median (ms) & Allocs & Bytes \\
@@ -228,9 +227,9 @@ the lowered code to understand the impact of these changes.
     AD-ready & 0.01 & 20000 & 1.55e+06 & 1.55 & 22 & 1504 \\
     \bottomrule
   \end{tabular}
-  {\captionsetup{hypcap=false}%
-  \captionof{table}{Fixed-step RK4 solve benchmarks for $t \in [0,T]$ with step size $dt$; allocations reported per solve.}}
-\end{center}
+}
+\caption{Fixed-step RK4 solve benchmarks for $t \in [0,T]$ with step size $h$; allocations reported per solve.}
+\end{table}
 
 \medskip
 
@@ -249,6 +248,21 @@ the lowered code to understand the impact of these changes.
 %----------------------------------------------------------------------------------------
 % BEGIN: THIRD COLUMN
 %----------------------------------------------------------------------------------------
+%------------------------ Conclusion ------------------------
+\section*{Performance ladder for Rössler RHS variants (L0–L5).}
+
+\medskip
+\hrulefill
+\medskip
+
+\begin{minipage}[c]{0.45\linewidth}
+  \centering
+  \includegraphics[width=\linewidth]{optimizations.png}
+\end{minipage}
+
+\medskip
+\hrulefill 
+\medskip 
 
 %------------------------ Conclusion ------------------------
 \section*{Conclusion: Optimizing ODE systems in Julia}
@@ -257,17 +271,19 @@ Experiment 1 confirms that tightening the RHS kernel delivers most of the speedu
 
 \medskip
 
-\noindent\textbf{Practical tips for fast RHS code.}
+
+\textbf{Practical tips for fast RHS code.}
 \begin{itemize}
   \item Write in-place updates for solver-friendly mutability; reserve allocations for setup, not per-step work.
   \item Use \texttt{SVector} for very small systems to keep data off the heap; fall back to \texttt{Vector} for larger dimensions to avoid compile-time bloat.
   \item Validate correctness, then add \texttt{@inbounds} and \texttt{@inline} to strip bounds checks and call overhead; keep arguments type-stable so the compiler can inline aggressively.
 \end{itemize}
 
+
 \medskip
 
 \noindent\textbf{Outlook.} The same kernel work carries to stiff problems and differentiation workflows; adding implicit integrators or adjoints next should reuse these allocation-free RHS variants without sacrificing performance.
-\medskip
+
 
 \noindent
 %------------------------ REFERENCES ------------------------

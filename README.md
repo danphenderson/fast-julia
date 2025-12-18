@@ -1,4 +1,4 @@
-![Rössler System Animation](./rossler.gif)
+[Rössler System Animation](./rossler.gif)
 
 *Figure 1 — Performance ladder for Rössler RHS variants (L0–L5).*
 ```mermaid
